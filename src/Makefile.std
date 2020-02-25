@@ -2,7 +2,7 @@
 #
 # XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
 #
-#      Bjørn Stabell        <bjoern@xpilot.org>
+#      Bjï¿½rn Stabell        <bjoern@xpilot.org>
 #      Ken Ronny Schouten   <ken@xpilot.org>
 #      Bert Gijsbers        <bert@xpilot.org>
 #      Dick Balaska         <dick@xpilot.org>
@@ -43,6 +43,13 @@ CC = gcc
 CFLAGS = $(DEFS) $(INCS) -g -O -I/usr/local/X11/include `pkg-config --cflags libwebsockets openssl`
 MLIB = -lm `pkg-config --libs libwebsockets openssl`
 XLIB = -L/usr/local/X11/lib -lX11
+
+#
+# Flags for MacOS X using gcc.
+#
+MACOSX_CFLAGS = $(DEFS) $(INCS) -I/opt/X11/include -DHAVE_GETLINE  `pkg-config --cflags libwebsockets openssl`
+MACOSX_DEBUG = -g -DDEBUG
+MACOSX_XLIB = -L/opt/X11/lib -lX11
 
 #
 # Flags for HP-UX using the native HP compiler.
@@ -296,7 +303,7 @@ TARGETS=make-common make-client make-server make-replay
 
 all:
 	@echo "Please specify your system.  Choose one of:"
-	@echo "    hppa/solaris/sun/aix/linux/sgi/os2"
+	@echo "    hppa/solaris/sun/aix/linux/sgi/os2/macosx"
 
 targets: $(TARGETS)
 
@@ -327,6 +334,14 @@ make-replay:
 
 xp-replay: $(OBJS3)
 	$(CC) $(LFLAGS) -o $@ $(OBJS3) $(XLIB) $(MLIB)
+
+macosx:
+	@$(MAKE) -f Makefile.std $(TARGETS) \
+		"CC=$(CC)" "CFLAGS=$(MACOSX_CFLAGS)" "MLIB=$(MLIB)" "XLIB=$(MACOSX_XLIB)"
+
+macosx-debug:
+	@$(MAKE) -f Makefile.std $(TARGETS) \
+		"CC=$(CC)" "CFLAGS=$(MACOSX_DEBUG) $(MACOSX_CFLAGS)" "MLIB=$(MLIB)" "XLIB=$(MACOSX_XLIB)"
 
 hppa:
 	@$(MAKE) -f Makefile.std $(TARGETS) \
@@ -423,7 +438,7 @@ $(MSUB): $(MSUB).c
 	$(CC) $(CFLAGS) $(MSUB).c -o $(MSUB)
 
 install:
-	@echo "Specify either install-hppa, install-linux, install-sgi, install-solaris or install-sun"
+	@echo "Specify either install-hppa, install-linux, install-sgi, install-solaris, install-sun or install-macosx"
 
 install-binaries:
 	if [ ! -d $(BINDIR)/. ]; then mkdir -p $(BINDIR); fi
@@ -460,6 +475,8 @@ install-solaris: solaris install-binaries install-libdir
 
 install-sgi: sgi install-binaries install-libdir
 
+install-macosx: macosx install-binaries install-libdir
+
 install-hppa-debug: hppa-debug install-hppa
 
 install-linux-debug: linux-debug install-hppa
@@ -467,6 +484,8 @@ install-linux-debug: linux-debug install-hppa
 install-sun-debug: sun-debug install-sun
 
 install-sgi-debug: sgi-debug install-sgi
+
+install-macosx-debug: macosx-debug install-macosx
 
 clean:
 	cd common && rm -f $(OBJS0) libxpcommon.a core

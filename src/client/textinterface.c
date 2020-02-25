@@ -2,7 +2,7 @@
  *
  * XPilot, a multiplayer gravity war game.  Copyright (C) 1991-2001 by
  *
- *      Bjørn Stabell        <bjoern@xpilot.org>
+ *      Bjï¿½rn Stabell        <bjoern@xpilot.org>
  *      Ken Ronny Schouten   <ken@xpilot.org>
  *      Bert Gijsbers        <bert@xpilot.org>
  *      Dick Balaska         <dick@xpilot.org>
@@ -72,6 +72,7 @@ extern char		hostname[];		/* my local hostname */
 
 
 
+#ifndef HAVE_GETLINE
 /*
  * just like fgets() but strips newlines like gets().
  */
@@ -90,6 +91,7 @@ static char* getline(char* buf, int len, FILE* stream)
     }
     return buf;
 }
+#endif HAVE_GETLINE
 
 
 /*

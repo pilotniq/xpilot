@@ -1,0 +1,31 @@
+
+		TkXpInterface-3.8.0
+
+ftp://ftp.xpilot.org/pub/contrib/TkXpInterface-3.8.0.tar.gz
+
+This is a Tcl/Tk script that allows you to configure xpilots servers, by giving
+you lots of buttons to click on, and things to slide :-)
+
+Features:
+
+   o     Easy to use interface
+   o     Choose from all maps in the directory you select.
+   o     Each game is highly configurable with the 140 options to
+         xpilots-3.1.x and later included.
+   o     Support is included for multiple ports, removal of individual items,
+         pizza mode, changing server speed, and much more!
+
+You will need wish(1) and xpilots(6) (!) to run this application.
+"wish" is from the Tcl/Tk package.
+
+N.B. The configuration options have been tested using tk8.0p2, tcl8.0p2 and
+xpilot-3.7.1.  It may not work on earlier versions of these programs.
+
+You can FTP Tcl and Tk from here:
+
+    ftp://ftp.sunlabs.com/pub/tcl/
+
+You can FTP XPilot from here:
+
+    ftp://ftp.xpilot.org/pub/
+

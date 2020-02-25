@@ -1,0 +1,6 @@
+/* $Id: Imakefile,v 5.0 2001/04/07 20:00:58 dik Exp $ */
+
+#include "Local.config"
+
+MAPS = *.xp
+InstallMultiple($(MAPS),$(INSTLIBDIR)/maps/)

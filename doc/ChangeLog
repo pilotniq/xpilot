@@ -1,0 +1,1834 @@
+
+===============================================================================
+====                         XPilot Change Log                             ====
+===============================================================================
+
+This is a summary of changes of release 4.5.5 compared to release 4.5.4.
+
+Both meta servers' IP adresses changed and in the client this is hardcoded.
+Both IP addresses have been changed to the new meta server.
+
+When more than one instance of a sound was generated in a frame, all those
+instances would be sent to the client, causing unnecessary network load and
+deafening playback. This has been fixed by eliminating duplicate sounds in
+single frames.
+
+Added client support for playing sound through the Esound daemon.
+
+Added a new server option -minItemMass.  This option gives
+the mass per carried item for a player.  It's default value is 1.0.
+This makes your ship really heavy when carrying lots of items.
+Therefore player must become careful which items they pick up
+and which ones to drop when they become too heavy.
+
+Jarno van der Kolk submitted a new server option -maxClientsPerIP
+which limits the number of clients for one IP address to 2.
+
+Now there is a pause tax of 0.01 point per frame.  This is
+to discourage the long pausing of players who have accumulated
+a high score.
+
+When the server option cloakedShield was on then deflectors could
+not be turned on while being cloaked.  Fixed.  Thanks go to Paul Forman.
+
+Kristian Söderblom contributed several important bugfixes.
+
+Ben Armstrong submitted a patch which fixes a problem with a client passing
+the wrong version to a server when multiple servers are displayed.
+
+Cliff Johnson found and fixed a problem with the talk window and certain fonts.
+
+===============================================================================
+
+This is a summary of changes of release 4.5.4 compared to release 4.5.3.
+
+Team cannons could kill teammates with laser pulses.  Fixed.
+
+On the map Death Star one can destroy a large number of targets with
+one FNC.  This results in packet buffer overflows and slow updates.
+To overcome this a smarter map update algorithm is implemented in the
+server and also map updates are now limited to max 2 KB per network packet.
+
+The default score font was reduced from 15 to 13.
+
+When the server sends map updates to the client these are now always
+acknowledged immediately by the client.  This should help prevent stalls
+or lock-ups on maps where are a large number of targets or cannons
+can be destroyed.  It should also reduce the number of very big
+server frame update packets.
+
+Robots no longer try to go after players who aren't in playing mode.
+
+Windows XPwho persistent fixes (shipbar, statusbar, toolbar).  XPwho
+can also set the user@host values.  XPwho now has scrolling credits box
+derived from the CREDITS file.
+
+Windows server now has a button to launch a client connected to this
+server (127.0.0.1).
+
+Windows installation, at the end of a successful installation, offers
+to launch XPwho (for Internet games) and/or XPilotServer (for local games).
+Hopefully, this will help with newbie installations who start XPilot.exe
+and can't figure out why nothing happens.
+
+Winni submitted a patch to fix the hardcoded IP address of both meta servers.
+
+
+===============================================================================
+
+This is a summary of changes of release 4.5.3 compared to release 4.5.2.
+
+Fixed a bug which caused paused players to become unpaused at end
+of round reset.
+
+Fixed two bugs that caused team scores to remain the same when a (or all)
+player(s) left. Scores of leaving players are now subtracted from the
+team score and the team score is reset when a team's first player enters.
+
+Objects from paused players are now inactive.  Other players can no
+longer collide with them.  Shots and mines from paused players will
+now be displayed in neutral colors.
+
+===============================================================================
+
+This is a summary of changes of release 4.5.2 compared to release 4.5.1.
+
+The IP address of the primary meta server was changed because
+it was moved to a new machine.  Both the client and the server
+make use of this IP address if they can't do a name lookup.
+
+Due to the recently introduced version filtering by the metaservers
+it now can happen that the number of servers listed in the client
+welcome screen is rather small.  This is now improved by trying
+to read at least 30 servers from both metaservers.
+
+The -messagesToStdout client option now also prints internally generated
+messages.
+
+The +cloakedShield server option now also works in shield enabled maps.
+
+===============================================================================
+
+This is a summary of changes of release 4.5.1 compared to release 4.5.0.
+
+Zemyla submitted code to remove all items at the end-of-round reset.
+
+Kimiko Koopman submitted a patch which adds two new options, selfKillScoreMult
+and unownedKillScoreMult (the latter is based on an idea from Paul Drees):
+    - scores for killing yourself or being killed by an unowned object
+      (like an asteroid) are now rated the same way other kills are, which
+      means that players with higher scores get penalized more than players
+      with lower scores.
+    - selfKillScoreMult, default 0.5, rates the score for killing oneself
+    - unownedKillScoreMult, default 0.5, rates the score for being killed
+      by asteroids and unowned shots, balls, etc.
+    - with these defaults, the base penalty for such kills is 5 points, just
+      like before, only now the player's score and different kill methods (the
+      other *KillScoreMult options) are also taken into account.
+
+Kimiko Koopman added another option, selfDestructScoreMult, because some
+folks didn't like how selfKillScoreMult applied to self-destructing as well.
+    - same default as selfKillScoreMult, 0.5.
+
+At end-of-round paused players would keep their items.  This enabled
+players to cheat by pausing right before the end-of-round reset
+and unpausing soon after.  To prevent this at paused players are
+now reset too at end-of-round.
+
+Since v4.5.0, players were unable to collide with their team's unowned
+(thrown or lost) balls. This made it impossible to destroy them in case
+en enemy player threatened to grab them. Unowned balls are now excluded
+from team immunity checking.
+
+Thorsten Kroeger submitted a small patch which fixes a most serious
+security problem with the XPilot server.
+
+===============================================================================
+
+This is a summary of changes of release 4.5.0 compared to release 4.4.2.
+
+Kimiko Koopman submitted a patch which changes the way scores are kept
+and makes it possible for players to form alliances:
+    - scores are kept as floats (DFLOATs) in the server. The client
+      receives (if >= 4.5.0) an int with the score * 100, or a rounded
+      value otherwise. The client recalculates the float and displays
+      the score with 2 decimals.
+    - team scores are kept separately instead of just being calculated
+      for display. Cannons count to this score as well. I have not yet
+      made further changes, such as the distribution of points for
+      team gains/losses.
+    - new option: teamShareScore. If on, each player has a score equal
+      to teamscore/number of members (that's why). Points are divided
+      evenly over all team members this way.
+    - (this is the most important stuff) alliances are possible. These
+      are a sort of on-the-fly teams. The options teamShareScore (that's
+      why) and teamImmunity work for alliances too, except only the
+      changes in score are divided for the latter. The client displays
+      them in an extra column (instead of the team column) with '+' if
+      alliances are not public (see below) or with a number if they are.
+    - there is a new talk command: /ally. It has a number of possible
+      subcommands:
+        /ally invite <name> invites another player into an alliance
+        /ally cancel cancels such an invitation
+        /ally refuse [<name>] declines one or all invitation(s)
+        /ally accept [<name>] accepts one or all invitation(s)
+        /ally leave leaves the current alliance
+    - two new options: allowAlliances and announceAlliances. The latter
+      determines whether alliances are announced to other players than
+      the members themselves. Invitations are never made public, but
+      only sent as messages to the invited players. Robots refuse
+      invitations if there is also a human player in their alliance.
+    - packet version has been increased to 0x4500 because of the new
+      format of score packets and the new teamscore packets. Older
+      clients don't receive team scores (the only difference yet are
+      the cannon scores) or information about alliances (in the score
+      packets).
+
+Austin Donnelly submitted a patch which adds an option to automatically
+kick players who have been paused too long:
+    So, I've introduced a new option: maxPauseTime.  If a player pauses
+    longer than maxPauseTime seconds, they are automatically kicked with a
+    message telling them they paused for too long.
+    By default, maxPauseTime is 1 hour.  So bona-fide pausers should have
+    nothing to worry about.  Especially if you're paused but viewing a
+    game, each time you switch to view a different player that counts as
+    activity, and the 1 hour timer is reset.  So this should only catch
+    players who have left their terminal for over an hour leaving
+    themselves playing.  The auto-pause feature should kick in after 1
+    minute, then an hour later they will be kicked.
+
+Kimiko Koopman submitted a patch which changes the way fuel drain from
+shot hits is calculated:
+    Revived the old idea (originally from Bob Glickstein) to vary fuel
+    drain from shot hits according to their kinetic energy. This was
+    disabled in v4.0.0 because it made cluster debris either too
+    powerful (N) or too weak (V). This patch compensates for that
+    effect by changing the mass of each cluster shot so that its
+    kinetic energy remains the same.
+    Since this is actually more realistic than not varying shot damage,
+    the option that turns this feature off
+    (shotHitFuelDrainUsesKineticEnergy), will be removed in a future
+    version about March 2002.
+
+Jarno van der Kolk submitted a fix for the server under NT:
+    When using the "Choose Map"-button in the WinServer the "current path"
+    is altered.
+    This means that XpilotServer can't find the configfiles, like
+    defaults.txt and robots.txt anymore.
+
+Paul Alexander Drees submitted a patch which adds asteroid concentrators:
+    This patch puts asteroid-concentrators into the game.  The
+    function of an asteroid concentrator is to control where
+    asteroids appear.  They have parameters similar to those for
+    item concentrators: -asteroidConcVisible, -asteroidConcRadius,
+    and -asteroidConcProb.  There is a function in guimap.c
+    called Gui_paint_setup_asteroid_concentrator() to paint asteroid
+    concentrators; currently, it does nothing, as I do not really
+    know how to do client programming.  When this function is
+    filled in by someone, it should appear as three rotating
+    squares.
+
+Kimiko Koopman submitted a patch which allows use of balls in race mode:
+    Added two options: ballrace and ballraceConnected. With ballrace on,
+    balls are timed instead of players. With ballraceConnected also on,
+    a player has to be connected to a ball to pass a checkpoint. With
+    ballrace on, but ballraceConnected off, any ball owned by a player
+    can pass a checkpoint for that player. When a player finishes the
+    race, the balls owned by that player are disowned, but not destroyed.
+    That way, other players can still use those balls in the race.
+
+Jarno van der Kolk submitted a patch which adds replay recording for Windows:
+    This patch allows the Windowsclient to make xpr-recordings too.
+
+Paul Alexander Drees pointed out that blockFriction should not be
+applied to phased ships.
+
+Paul Alexander Drees submitted code to always announce when a server option
+is changed during play.
+
+A new client option -showScoreDecimals has been added, which has a useful
+range [0,2].  It gives the number of decimals to use when displaying scores.
+The default value for this option is 1.
+
+It is now possible to use the map file keyword "expand" on the command line
+too.  The "-expand" option takes as argument a comma separated list of words.
+These words must have been defined with the "define:" keyword in either
+the map file or the xpilots defaults file.  They are all expanded.
+This opens up powerful possibilities to predefine groups of settings
+which can be activated on the command line with only limited typing.
+
+Paul Alexander Drees submitted code to detect when shots are near mines.
+A new server option -mineShotDetonateDistance determines if these
+shots will detonate a mine or not.
+
+Paul Alexander Drees submitted patch to improve the handling of maxRoundTime:
+    I noticed a bug in the server today.  It caused maxRoundTime to be all
+    but disregarded unless gameDuration and roundDelay were set.  I have
+    fixed this bug, and also made it so that when maxRoundTime is set and
+    gameDuration isn't, the time left clock displays how much time is left
+    in the round.
+
+Paul Alexander Drees submitted a patch:
+    I made a couple fixes to the alliance system, pertaining to tanks.
+      - Tanks that belong to you are shown on your radar as green.
+      - When one of your shots intersects one of your tanks, teamImmunity
+	is checked, instead of selfImmunity.  This way, it works the same
+	whether alliances are on or not.
+      - You cannot use KEY_LOCK_CLOSE and KEY_LOCK_NEXT to lock onto your
+	tanks.
+      - Your tanks show on your screen as blue.
+
+Paul Alexander Drees submitted a patch which implements a lag meter:
+    Here is a patch for a client-based lag meter.  The code is a kludge,
+    but it works adequately well, that I know.
+
+Kimiko Koopman submitted a patch which changes the scoring of asteroids
+and cannons:
+    asteroidScoring has been replaced by asteroidPoints and asteroidMaxScore.
+    Players receive asteroidPoints points for every asteroid they break,
+    until their score is >= asteroidMaxScore. If no points are scored,
+    either because asteroidPoints is 0 or the player's score is too high,
+    no points are displayed on the HUD. cannonPoints and cannonMaxScore
+    work the same for cannons. The defaults are 1.0 and 100.0 for the
+    *Points and *MaxScore respectively, such that the scoring behaves
+    mostly the same as before.
+    BTW, I changed the displayed position of kill scores for the winner to
+    the position of the loser. This way, the displayed score reflects the
+    actual location of the kill.
+
+Two new server options were added to allow players to log messages
+to the server administrator.  The adminMessageFileName option gives
+the name of the file where player messages for the server administrator
+will be saved.  For the messages to be saved the file must already exist.
+Players can send these messages by writing to god.
+The adminMessageFileSizeLimit option gives the maximum size in bytes
+of the admin message file.
+
+Kimiko Koopman submitted a patch to make cannons defend themselves:
+    Cannons can now defend themselves using emergency shields and phasing
+    devices. This behavior is controlled by a new option cannonsDefend. The
+    default is true, but cannonsUseItems must also be true for this to have
+    an effect. There is a chance that a cannon will not use an available
+    em. shield or phasing dev., mostly to reduce the load on maps with many
+    cannons with defensive items.
+
+Thorsten Kroeger was getting sick of missing messages, so he hacked in
+some lines so that one can decide to have messages (with or without status
+messages) sent to standard output. You can change it in the config menu.
+
+Jarno van der Kolk submitted code to draw asteroid concentrators.
+
+Fixed two bugs which allowed one to obtain normal shields on maps where
+shields were not allowed, but emergency shield items were available.
+
+===============================================================================
+
+This is a summary of changes of release 4.4.2 compared to release 4.4.1.
+
+Paul Alexander Drees submitted a bugfix for the Windows version of XPilot.
+It used to be that, if you typed a message, the score window would go blank
+until a new set of scores came in.
+
+Joe Groff submitted a patch to allow more keys to be bound to one
+mouse button.
+
+Jarno van der Kolk submitted a patch:
+    Almost all of the serveroptions can now be "changed at runtime".
+    Only file-options, like scorefiletable, defautsfile, etc. still can't be
+    changed at runtime.  And the options, timing and teamplay.
+
+Bob Glickstein submitted "flak hack."  It changes the shots fired by cannons 
+to be AAA ("anti-aircraft artillery") rounds.  These work like normal shots 
+but explode into small flak bursts after a short while.
+
+Austin Donnelly submitted a patch:
+    Also discussed on rec.games.computer.xpilot was an proposal to make the
+    ball connector non-rigid.  This patch adds a new option
+    "connectorIsString", (default no) which when set allows the connector
+    to go "slack", so you can't push against the ball.
+    This makes certain ballruns harder, and others easier.  It does take a
+    little getting used to.
+
+Guido Koopman reworked Bob's flak patch a little. Flak explosions are smaller
+and flak can be turned off with an option cannonFlak.
+
+Austin Donelly submitted a patch to allow clients to make some
+attempt at backwards compatibility with old servers which can't handle
+a turnResistance of 0.0.
+
+Austin Donelly submitted a patch, which adds two new options:
+    ballCollisions  (default no)   Do balls collide with other objects?
+    ballSparkCollisions (default yes)   Can balls be blown around by exhaust?
+
+    ballSparkCollisions is only active if ballCollisions is also on.
+
+    What happens during a ball-object collision depends on the object.
+    Shots (including missiles of various kinds) are absorbed in an
+    inelastic collision.  Other balls bounce off, unless they were going
+    too fast (as determined by maxObjectWallBounceSpeed) in which case
+    both balls pop.  Wreckage and debris is also absorbed.  Laser pulses,
+    mines and powerup items pass unhindered through the ball.
+
+    I originally had items bouncing off the ball, but this turned out to
+    look silly: items have low mass and even slightly clipping them
+    with a ball would send them off at high speed without affecting the
+    ball much.
+
+    I tried to get lasers absorbed, but couldn't work it out - I suspect
+    the collision detection is slightly different, but I haven't spent
+    much time on it.  Mines I couldn't decide whether they should trigger
+    or bounce of the ball (so I ignored them).
+
+    This is my latest version, and fixes the problem I mentioned earlier
+    about balls in treasures being blown about.
+
+    One of the cute things I've found is that you can blow a ball by
+    placing and detonating a mine close to it :)
+
+Paul Alexander Drees submitted a patch for the server:
+    It makes asteroids release items when they are broken.
+    The probability that an asteroid releases items is given
+    by the option asteroidItemProb, while the number of items
+    that are released is between 1 and asteroidMaxItems.
+    I also streamlined some code in frame.c using a function I
+    created for the asteroid item determination.
+
+Juha Lindström submitted a patch for the client:
+    The attached patch draws the object information of the radar to the
+    map on an area three times the size of the radar. The information
+    is drawn in the sliding radar way so that you sit in the center
+    of the radar and the circles show where the opponents are relative
+    to you. Now if one of the circles suddenly moves quickly towards
+    you, just drop a few bullets to the direction of the circle, move
+    behind some cover and BANG the world is again a bit better place
+    to play xpilot :)
+
+Jarno van der Kolk submitted a version of xp-replay for Windows:
+    Finally, it works. (i.e. it doesn't crash all the time) :-)
+    This ZIP contains the source and an executable in the Release-dir.
+    The files should be unzipped into src/replay/NT, since the project uses
+    "src/client/recordfmt.h".
+    Beware that XPreplay loads the entire XPilot recording into memory, so
+    it doesn't really like the 80 Mb recordings from the summercamp. It CAN
+    handle the ballrunrecordings from the various ballrunsites just fine
+    though.
+
+===============================================================================
+
+This is a summary of changes of release 4.4.1 compared to release 4.4.0.
+
+When tuning text options at run time like the password the server
+would crash.  This has now been fixed.
+
+Clients now support the firewall patch.
+For this the client has two new options: -clientPortStart and -clientPortEnd.
+When the client is started with e.g.:
+    -clientPortStart 40000 -clientPortEnd 41000
+then the server will use this range for UDP ports to communicate with clients.
+This is useful for sites which are behind a firewall.
+
+A new server option -passwordFileName gives the path to a file which
+only contains a definition for the server password.  The advantage
+of this is that you can set the file permissions so that others
+cannot read its contents.
+
+Zemyla submitted a patch to fix a small bug in his old blockFriction patch.
+The problem was that the option -blockFrictionVisible would not work.
+This patch fixes it.
+
+Ben Armstrong fixed a bug where ball ownership for all connected balls
+would be reset whenever a player would leave.
+
+===============================================================================
+
+This is a summary of changes of release 4.4.0 compared to release 4.3.2.
+
+New option (bool) logRobots: whether to log robot's comings or not.
+
+Windows only: server config dialog box has a button to allow you to choose a
+map and two url links: local Server Options; and Jarno's Server Options Page.
+
+Removed support for CMW and VMS as these have been broke for a long
+time and are not expected to be updated anymore.
+
+Removed support for antique 0.x versions of Linux which did not have
+support for sending broadcasts to the network and had small socket
+buffer limitations.
+
+Add strlcpy and strlcat.  Replaced most of the calls to strcpy, strncpy,
+strcat and strlcat with calls to strlcpy and strlcat.  New code should
+preferably only use strlcpy and strlcat.
+
+Removed sourceid strings as they only produced compilation warnings
+and haven't ever turned out to be useful.
+
+Paul Alexander Drees, a.k.a. Zemyla, submitted a big patch with a large
+number of small new features:
+  - A small pair of client options (-user and -host) to be abls to set
+    the user@host in the .xpilotrc file or on the command line.
+  - A set of options to control ball parameters:
+      o -ballMass sets the mass of the ball.
+      o -ballConnectorStringConstant to set the restoring force of the
+	connector.
+      0 -ballConnectorDamping to set the damping of the connector's motion.
+      o -maxBallConnectorRation to set how much the connector can deform
+	before it breaks.
+      o -ballConnectorLength to set the default length of the connector.
+  - -cannonDeadTime to set how long (in seconds) a cannon stays dead once
+    it is killed.
+  - -targetDeadTime to set how long (in seconds) a target stays dead once
+    it is destroyed.
+  - Random items.  These items show no hint of what they are; instead,
+    they appear to alternate between different items.  The items shown
+    depend on what probabilities there are for items; for example, a map
+    where the only items are wideangles and armor would have its random
+    items alternate between wideangles and armors.  Dropped items are
+    never random.
+  - -randomItemProb to set how oftem items appear random (0.0-1.0).
+  - -/+captureTheFlag mode.  When -captureTheFlag is on, the treasure
+    that an enemy ball is being deposited in has to be safe in order to
+    score.
+  - Friction blocks.  The map character for friction blocks is "z".
+    When a ship is in a friction block, the frictional force on it is
+    equal to -blockFriction instead of -friction.  There is also the
+    -/+frictionVisible option to change whether the friction blocks
+    appear as decor or not at all.
+  - -coriolis determines through what angle (in degrees) a ship's
+    velocity vector rotates in a frame.
+  - -robotRealName, -robotHostName, -tankRealName, and -tankHostName.
+    These options set the realnames and hostnames for robots and tanks.
+  - -tankScoreDecrement.  This option describes what the difference
+    is between the player's score and the score of his released tanks.
+  - -/+turnThrust.  This option behaves exactly like the former
+    compile-time option of the same name -- turning uses fuel and produces
+    sparks.
+  - -/+selfImmunity.  This option determines whether a player and
+    his tanks are immune to his own shots, mines, sparks, etc.
+  - -defaultShipShape and -tankShipShape.  This sets the shipshape
+    for people who don't define a shipshape (or everyone when
+    -allowShipShapes is off), and the shipshape for released tanks.
+  - An enhancement to the Tune_option function that lets it set
+    valSec and valPerSec values (so the /set command can change
+    these values).
+  - A refinement to the /set command to show the value after tuning
+    in the server message.
+  - A /get command to get the current value of an option.  It does not
+    work for password and mapData (on purpose -- I do not want any Joe
+    Blow to be able to get the password, and the mapData far too long.)
+  - A refinement to the /help command.  When the command is given with
+    no arguments, it iterates through the list of commands and displays
+    each one in turn instead of showing a fixed list.
+  - Empty treasures.  These act like regular treasures, but they do not
+    own a ball, and are not counted in the number of treasures a team
+    owns.  Thus, they are useful for places that are inaccessible to
+    players, but that balls can be dropped into (like Worm Mountain).
+  - A refinement to the Detonate_item() function.  If the victim is a
+    tank, the items belong to the player who owns the tank.
+  - A refinement to shoving.  Shoves now count as kills, robots can
+    declare war on people who shoved them, and robots can undeclare war
+    on people they shove.
+
+Guido Koopman submitted a patch:
+    - treasures are allowed in non-team mode.
+      balls can not be saved because they don't belong to a team.
+      number of frames loose is not reported when a ball is destroyed.
+    - robots can declare war when killed by a ball.
+    - small changes in the client to paint treasures without team correctly.
+
+Fixed the saving of recordings to use the proper window dimensions.
+
+Added Ben Jackson's fix for not drawing the border of the active view
+with window scale factors which are equal to one or less.
+
+The order in which radar information about players is sent is now randomized.
+This is to prevent cheat hacks which take advantage of the fixed order
+some information is sent in.
+
+Paul Forman submitted code which adds options to prevent players
+from placing stationary mines and prevent players from throwing
+mines of the speed at which they fly is below a limit.
+This patch was modified and simplified to only add one new option
+to the server -minMineSpeed which controls the minimum speed at which
+mines move.  The default is zero, which allows for stationary mines.
+Non-zero values will give the mine an initial speed based on the
+player velocity and direction.
+
+Fixed bug which caused lowering of number of robots not to work.
+
+Guido Koopman submitted a really nice patch which implements asteroids:
+    - a new object type: asteroid
+    - version magic number has been increased to 4400 (was 4300)
+    - there are currently only two shapes for asteroids, but more
+      can easily be added.
+    - sounds for asteroids: asteroid_hit and asteroid_break
+    - a new packet type: PKT_ASTEROID (number 80)
+    - two new files in src/server/: asteroid.[ch]
+    - constants like mass, size etc. are #defined in asteroid.h
+    - points are awarded for hitting asteroids with balls
+    - four new server options:
+      option name:              description:                    default:
+      asteroidsWallBounce       Do asteroids bounce off walls?  true
+      asteroidCollisionMayKill  Are asteroids deadly?           true
+      asteroidsOnRadar          Are asteroids visible on radar? false
+      asteroidScoring           Points for shooting asteroids?  true
+      asteroidProb              Asteroid create probability     5e-7
+      maxAsteroidDensity        Max. [0.0-1.0] asteroid density 0
+
+    Behavior of asteroids:
+    Asteroids are created with a random size from 1 to the maximum size (4).
+    Bigger asteroids can take more hits before breaking than smaller ones.
+    Asteroids size 1 can take no hits (are destroyed when hit).
+    When an asteroid breaks, two asteroids of size N - 1 are created, plus
+    some debris and wreckage.
+    If asteroidScoring is on, one point is awarded per asteroid broken (or
+    destroyed for size 1), up to a maximum of 101 points. This is the same
+    as for cannons.
+    Clients with versions less than 4400 are not sent the asteroid objects,
+    although they can still see them on the radar if asteroidsOnRadar is on.
+
+Sometimes when a client was slow to join in an almost full game a robot
+could be started which would cause the client login process to fail.
+This has now been fixed.
+
+Guido submitted a new patch to let asteroids collide with many objects:
+    Improved asteroid - object collisions. Asteroids now collide  
+    with wreckage, debris and sparks from players or cannons; no
+    longer collide twice with other asteroids; trigger mines and
+    torpedoes instead of hitting them. Also, different objects
+    do different amounts of damage to asteroid. Players and
+    asteroids bounce elastically.
+
+New algorithms have been implemented in the XPilot server which speed up
+the handling of objects.  This will especially be noticable on servers
+with more players, or servers with lots of robots and objects.  These
+servers will see reduced CPU usage, which benefits network I/O processing.
+A client visible feature related to these improvements is that packets
+received will hardly ever be larger than one kilobyte.  What happens
+when a player is near a very large number of objects is that at most
+the 500 objects closest to the player are transmitted over the network.
+
+The option parser internals have been overhauled.  Now for each option we
+can specify from which sources it can be set (command line, defaults file,
+or the map file).  And we can control which options can be seen by clients.
+
+When an option list was requested options with type valSec or valPerSec
+were not corrected for FPS.  This made them look very different from
+their values in the map file.  This has now been fixed.
+
+Now a few options are not listed when a client requests to see
+the list of server options.  These include: robotFile, mapFileName,
+defaultsFileName, scoreTableFileName, and password.
+
+Added a -motdFileName server option.  This option specifies which
+file to use for the MOTD which is displayed when clients join.
+Its default value is determined at compile time, or gotten from
+the environment variable XPILOTSERVERMOTD.
+
+When cannons were configured to use items this could crash a server
+when a full nuclear cluster mine would explode.
+
+Now option define statements which are set in the defaults file
+can be expanded in the map file and by doing so set options which
+could not have been set in the map file explicitly.  This sounds
+very complicated, but it will be easy to understand with an example:
+        When in the defaults file I specify these two define statements:
+
+            define: PrivateSettings \multiline: EndPrivateSettings
+            idleRun:                no
+            noQuit:                 no
+            contactPort:            15000
+            serverHost:             localhost
+            reportToMetaServer:     no
+            EndPrivateSettings
+
+            define: PublicSettings \multiline: EndPublicSettings
+            idleRun:                yes
+            noQuit:                 yes
+            contactPort:            15345
+            reportToMetaServer:     yes
+            EndPublicSettings
+
+        Then I can expand these defines in any map file with:
+
+            expand: PrivateSettings
+        or:
+            expand: PublicSettings
+
+        This does allow me to choose between these option values in
+        each map file.  While the options themselves are of a kind
+        which normally cannot be set in mapfiles, but only in the
+        defaults file or on the command line.
+
+Some changes have been made to accomodate maps with hundreds
+of robots.  The most important of these changes is the addition
+of a new packet type to send radar information to clients much
+more compactly.  This is packet type is called fastradar packet.
+
+Ben Armstrong updated the xpilots manual page.
+
+===============================================================================
+
+This is a summary of changes of release 4.3.2 compared to release 4.3.1.
+
+There is now a Visual C++ XPilot.dsp in the project root directory to
+allow easier building of Windows code.
+
+Nasty shots now use the shot_size variable.
+
+Since at least version 4.2.1 there was a bug in saving keys to the XPilot
+client config file.  This has now been fixed.
+
+Paul Alexander Drees submitted an updated robots file.
+
+===============================================================================
+This is a summary of changes of release 4.3.1 compared to release 4.3.0.
+
+Some .mak files in the NT subdirectories were removed because it was too
+hard too keep them synchronised with the rest of the source tree.
+
+The file src/common/socklib.c was rewritten from scratch to get rid
+of some old non-GPL copyright stuff.  Now everything in XPilot should
+be under the GPL copyright.
+
+Applied Jarno van der Kolk's fix for improving sliding radar performance
+under Windows.
+
+Replaced the existing map generator with wildmap, which generates much
+better maps if the default map could not be found, or if "-map wild"
+was specified on the command line.
+
+If the client stopped receiving frames, you couldn't disable
+mouse control unless you managed to free the mouse pointer with
+something like WM key shortcuts. Fixed this problem thans to Uoti.
+
+Ben Jackson submitted code which adds a button to the welcome screen
+with which you can ping all the servers.  The sort criteria for the
+list of servers is then augmented with the ping times.
+
+Ben Jackson submitted partially finished code to measure the speed
+of different graphics features.  He didn't commit yet to any
+further work on this.
+
+Juha Lindström submitted code to fix the new socklib library
+for Windows peculiarities.  He adds the following remark:
+
+	It seems that the current 4.3.1alpha doesn't compile on windows due to a few
+	issues in socklib.c and wildmap.c. Attached is a patch I used to get the
+	windows version working. Below is a short explanation of the socklib issue
+	as it was more complex.
+	  Currently the windows part of function sock_get_host_by_name expects that it
+	is called from a thread that does not own the window notifyWnd. This is the
+	case when the function is being used by the server but as the client usually
+	contains only one thread it will block forever in the function. In previous
+	xpilot versions this was handled so that the client never used GetAddrByName
+	(the old name for sock_get_host_by_name) but instead used gethostbyname
+	directly. In this new version every host name lookup is done with
+	sock_get_host_by_name and this causes the client to freeze.
+	  The patch fixes this problem in the following manner. The function still
+	uses WSAAsyncGetHostByName to do the lookup to solve the long timeout
+	problem with gethostbyname. After calling WSAAsyncGetHostByName the calling
+	thread enters a loop and starts polling its message queue for a
+	WM_GETHOSTNAME message indicating that the lookup is ready. If the calling
+	thread is the owner of notifyWnd (as is the case with the client), windows
+	will deliver this message to the queue. If the calling thread is the worker
+	thread of the server , windows will deliver the message to the message queue
+	of the main thread because it is the owner of notifyWnd. Upon receiving this
+	message, the main thread will forward it to the worker thread using
+	PostThreadMessage thereby letting the worker thread exit the loop.
+	  As I'm not at all experienced in windows programming, I'd suggest that
+	someone who is reviews that stuff before any of it is included in the
+	release.
+	-- Juha
+
+Ben Armstrong submitted a patch to limit the UDP ports which the
+server uses for client connections in a predefined range.
+For this the server has two new options: -clientPortStart and -clientPortEnd.
+When the server is started with e.g.:
+    -clientPortStart 40000 -clientPortEnd 41000
+then the server will use this range for UDP ports to communicate with clients.
+This is useful for sites which are behind a firewall.
+
+Fixed compilation problems for Linux with glibc 2.2.2.
+
+Ben Jackson supplied a patch to the server, which adds a new -serverHost
+option.  With this option you can specify the hostname and IP address
+the server will use if the machine has more than one network interfaces.
+
+Fixed a bug which caused the client to crash when the shipshape file was
+specified in the ~/.xpilotrc file, but the shipshape file did not exist.
+
+Ben Armstrong submitted an updated manual page for the xpilot client.
+
+The default value for maxColors has been changed from 4 to 8.
+On some old and cheap graphics hardware this may slow down the
+client a bit, so in that case players may need to explicitly set
+the value of maxColors to 4 in their XPilot defaults file.
+
+Ben Jackson submitted a patch to have XPilot compile under Sun Solaris.
+
+Ben Armstrong submitted a patch which adds an option to the client
+which controls the color of old messages.  The option is -oldMessagesColor.
+It can be configured in the "config" window.
+
+The doc/README.sounds file has been updated to the current state of affairs.
+The XPilot sounds file is now located as LIBDIR/sounds instead of
+the erroneous definition of SOUNDDIR/sounds.
+
+===============================================================================
+
+This is a summary of changes of release 4.3.0 compared to release 4.2.1.
+
+Changes to be able to support many more colors.
+
+Support for RGB color cubes to be able to map true color pictures
+to screens which have less colors.
+
+Claus Leth Gregersen submitted a busload of new code which adds fancy
+graphics to the client.  The entire world and all objects and ships
+can now be drawn in full color pixmaps.  He also submitted code
+to be able to support the old client graphics and the new pixmap
+graphics in the same client.
+
+Jarrod Miller updated mapedit to include all the 4.2.1 server options.
+
+Changes to maps2image in Makefile, bdf2c.c and maps2image.c for portability.
+One fix in maps2image.c for closing a file too often, which caused a crash on
+some platforms.
+
+Fix for emergency shields.  When maxShieldedWallBounceSpeed was more than 100
+bouncing with emergency shields would lower the max allowable bounce speed
+to 100.
+
+Added the Mersenne Twister pseudo random number generator to XPilot.
+
+Changed the pseudo random number code to use the Mersenne Twister instead
+of the stock rand(3).
+
+The server log file for messages to god now must exist and be writable
+and be less than 100 KB before messages to god will be logged.
+
+Peder Herborg submitted a patch to make sliding radar also work under Windows.
+
+Ben Jackson submitted a patch containing several fixes:
+
+	altScaleFactor doesn't need a special update function.
+	Changing it doesn't change the display.
+
+	textured walls need WINSCALE'd texture offsets to stay in sync
+	with the walls
+
+	split the sending of phased/cloaked for new clients
+
+	new clients have enough info in guiobjects.c to paint phased
+	ships differently, but for now it calls the cloaked ship
+	drawing.  the code should probably be reorganized so that
+	phasing and cloaking aren't mutually exclusive.
+
+	I think there was a bug that would have made cloaked ships on
+	your team show up in the wrong color, so I fixed it.  No
+	current maps get into that situation (unless you count bloods
+	with items).
+
+	misc cleanup in guiobjects.c
+
+	fix another excess Send_display() bug.  we need an xpilot
+	protocol dumper to check this sort of thing.
+
+	swapping scalefactors calls Config_redraw() to swap the values
+	in the config panel
+
+	fix the xpilot.domain.com search code.  I might be the only
+	server using it these days...
+
+	servers send radar team information to clients running the
+	patch version that was first to have the feature, since the
+	data is sent the same way.
+
+Now the server only tries to do a DNS lookup for xpilot.yourdomain.com
+when the server option searchDomainForXPilot is explicitly turned on.
+The reason to make this an option lies in the fact that for some sites
+DNS lookups are slow, especially lookups for nonexistent names.
+
+===============================================================================
+
+This is a summary of changes of release 4.2.1 compared to release 4.2.0.
+
+The server option -armorHits was inadvertently mentioned in the ChangeLog
+for version 4.2.0.  It was removed from 4.2.0 before the public release.
+
+Clients with -maxColors set to less than 8 would not remove the high bit
+from the size element of a radar packet.  When the -maxColors was set to 4
+and if the client was connected to a new modified server then this bug
+caused teammates not to be visible on the radar.
+
+The server now sets the high bit of the size element of a radar packet
+when the player to be shown is a teammate.  The server only does this
+for clients which have a version of 4.2.1 or higher.
+
+Clients who have the -maxColors option to 8 or higher can now show
+teammates in green on the radar when playing on a 4.2.1 server.
+
+Changing the sparkProb setting in the client while playing would
+not always succeed.  This should be improved now.
+
+Support for displaying more than 16 colors has been added for
+clients who do not play in colorSwitching mode.  This feature
+notably will be useful for clients which have been configured
+to run in multibuffer or doublebuffer mode.
+
+Erase mode now also works in multibuffer and doublebuffer mode.
+
+The -altScaleFactor client option now works even if not configured.
+
+The carriage returns in a few client source files have been removed.
+
+Some features of the DeathCup 2000 server are now standard in XPilot.
+These include:
+    - The useWreckage option to turn off the wreckage that
+      destroyed ships leave.  The default value is on.
+    - The roundsToPlay option can be used to specify the number of
+      rounds to play.  By default this is set to 0, meaning no limit.
+    - The timerResolution option can be used to specify the operating
+      system specific timer resolution.  Setting this option to the
+      correct value can improve the accuracy at which the server
+      transmits frame updates to the clients.
+    - The password option can be used to set the password which is
+      needed to obtain operator privileges while playing.
+    - Using talk messages starting with a slash players can now
+      interact with the server.  The /help command lists the
+      available commands.  Some of these require operator
+      privileges which can be obtained by giving the correct
+      password to the /password command.
+
+When sending frame updates to the clients the server now first packs
+information about ships before shots.  It used to be the reserved.
+On some servers with lots of items this could cause ship information
+not to be included because the frame update packet was already full
+with item data.
+
+On maps with robots and balls the server could crash at startup
+when -idleRun was also set as soon as a robot would be searching
+for the nearest ball.  This caused a server crash on Solaris,
+but not on Linux.
+
+===============================================================================
+
+This is a summary of changes of release 4.2.0 compared to release 4.1.0.
+
+Sven Mascheck submitted two bugfixes.  One is a problem with locking on
+players during teammode.  The other with lock banks.
+
+Teemu Elias Hirsim$ki fixed a bug in xp-replay related to the recent 
+addition of the mirror item.
+
+Some changes were derived from the XPilot summercamp patches webpage:
+    - client: an extra check for line style being solid in paintobjects.c.
+    - server: extra checks to keep player direction within a valid range.
+    - server: If you were near your treasure box and couldn't connect to the
+      unmoved ball there, you sometimes were unable to connect to any other
+      balls either.
+    - server: if the target was destroyed of a team without an active player
+      then no message would be displayed.
+    - server: loadlock could cause a stale lock to be loaded.  This could
+      result in a server crash.
+
+Sometimes a player could not join over a slow connection because a robot would
+take his homebase.  The message xpilots would print would look like:
+    xpilots: Not enough bases for players
+
+Ben Jackson submitted a large number of bugfixes for client display:
+
+    These patches fix lots of bugs with the client display when using a
+    scaleFactor other than 1.0.  The client looks significantly better at
+    both very large scale (< 0.5) and very small scale (>= 2.0).  I believe
+    I have fixed all of the font position bugs, some of which were even
+    visible with no scaling.  The client looks better both with much bigger
+    and much smaller fonts for gameFont.  All of the changes were tested
+    with and without -erase, so there should be no new pixel dust.
+
+    Some of the most significant improvements are in the HUD, which had
+    many layout bugs due to scaling.  Also, a longstanding bug with the
+    duration of the fuel display has been fixed.
+
+    src/client/painthud.c:
+
+	Make Paint_meter() consistent about what is WINSCALE()d and
+	what is not, and avoid scaling twice for some things.
+
+	Position scoreobjects properly.
+
+	Position lock range correctly.
+
+	Omit mini version of locked ship if it would be too small to
+	identify anyway (smaller than 1/3rd original size overall,
+	which makes ships like the LARDBUS 10x10 pixels).
+
+	Revamp item display to avoid overlaps and other problems.
+
+	Center "Autopilot" light correctly.
+
+	Center hud messages correctly.  Also, if the first HUD message
+	is too wide to fit in the gap at the bottom of the HUD, move it
+	down a line so it doesn't overlap the fuel/vert hud lines (if any).
+
+	Move fuelCount decrement so that the fuel number actually
+	disappears eventually if fuelMeter is off.  See also the comment
+	about shorter FUEL_NOTIFY time below.
+
+    src/common/const.h:
+
+	Decreased FUEL_NOTIFY (time the number stays on) from 16 seconds
+	to 3.  If you liked the old behavior, just set fuelNotify (no
+	relation to that constant) to a very low number and it will stay
+	on all the time, just like before.
+
+    src/client/paintmap.c:
+
+	Properly center `F' in fuel squares.  Fully erase it if the font
+	is bigger than one square.
+
+	Change display of base teams/names to center the info below the
+	base rather than left-justifying it.  Make it work for larger
+	fonts.  Make it display team numbers/player names for bases facing
+	right without overlapping them when scaling is on.
+
+	Target team numbers are properly centered.
+
+	Treasure team numbers are centered and just above the ball.
+
+    src/client/paintobjects.c:
+
+	Properly center `P' in paused player blocks.  Huge fonts still
+	lose for -erase, though.
+
+	Properly center bomb owners under bombs.
+
+	Properly center player name under players.  Added 1 pixel more
+	separation between the name and the ship.
+
+	Properly center the round delay.
+
+	Fix ball size with ballTexture and scaling.  You'll still have
+	to supply a ball.xpm that's the right size to get the expected
+	results.
+
+	Scale mines, properly erase them at all scales.
+
+    src/client/xinit.c,
+    src/client/configure.c:
+
+	Scale dashes/cdashes to scaleFactor.  This affects all dashed
+	lines:  (visible) cloaked ships, shields, tractor beams, hud
+	lines, partially conencted treasures, refueling lines...
+
+    src/client/netclient.c:
+
+	Clarify the draw_width/draw_height role.  Rescaling and resizing
+	both now have the proper effect, and the client doesn't send
+	resizes for every frame.
+
+Ben Jackson also submitted a patch to improve the accuracy with which lock
+distance is calculated:
+
+    src/server/update.c:
+
+	Move computation of lock distance to a second loop after the
+	player position update loop.  The direction is computed during
+	the frame update, so the distance and direction were out of
+	sync, but only for players with lower indices than the player
+	they were locked onto.
+	This affected the HUD display for players and messed up some
+	robot computations.
+
+Ball and player positions were not calculated at `the same time'.
+So it was not possible to connect at very high speeds.
+This is called the `connector bug'. Fix taken from
+Uoti Urpala's server patch.
+
+New client option `selectionAndHistory' for the unix version:
+    * You can place the cursor in the talk window with the left pointer
+      button.  This works also with `Left'/`Right'.
+    * You can cut from the player talk messages (at the left top edge).
+    * You can cut from the talk window.
+    * At both places, the selected text is drawn emphasized (blue)
+      (but not until you finish the selection).
+    * You can paste into the talk window.
+      Unprintables (according to iso-latin-1) are converted to space.
+    * Your own messages are stored in a cyclic history (default ist 32 lines)
+      you can browse through it in the talk window with `Up' and `Down'.
+      Number of saved lines is `saveLinesInHistory'.
+    * The `Up',`Down',`Left',`Right' from above are configurable with
+      `keyTalkCursor[Up|Down|Left|Right]'.
+    * You can print all current server and player messages to the `tty' with
+      `Print' (`keyPrintMessagesStdout').
+
+    Details:
+    * As long as a cut from the messages is pending (button not released),
+      no new messages will be drawn, but they get buffered and are drawn after
+      you release the button.
+    * Emphasized text in the talk window gets deleted when typing on.
+    * The cut will notice if you wanted to include a final `newline'.
+    * About the `history':
+      - When you type some text and then start browsing through the history
+	(without pressing enter) your text is stored and still available
+	by browsing. Purpose: looking at/resending/modifying older messages.
+      - The history line currently drawn is automatically stored in the
+	selection, means you can paste it immediately.
+    * Cutting in common:
+      - The selected text is stored the way like terminalemulators do.
+	It stores selections in both `cut buffer' and `primary selection'
+	(in contrast to netscape f.i. using only the primary selection).
+	[Some versions of netscapes sometimes delete(!) the `primary selection'
+	when starting (why did they call it `mozilla'?)]
+    * Cutting from the player messages:
+      - As long as there is a selection, older messages will get white but then
+	their `expire' won't be counted down further. Thus they won't disappear
+	(except when new messages come in).
+      - Cutting doesn't include the last character - like in
+	a terminalemulator.
+    * A blinking cursor being over an unemphasized underscore is drawn 
+      emphasized to be able to still see that underscore.
+    * About finishing a cut (releasing 1st button) outside the talk window:
+      if you do it right from where you started, it's considered as
+      cutting all the rest of the line.  Left: analogous.
+    * note: only one XClient `owns' the `primary selection' at a time.
+
+Fixed auto-idle-pause bug
+(client auto shield when restarting from the base was interpreted as keystroke)
+ 
+Lasers disappear less frequently when wrapping (from Uoti Urpala).
+ 
+Fixed turnspeed bug (from Uoti Urpala).
+ 
+Team locking fixed again.
+ 
+If FPS is odd, the client might have gotten no frames
+at all (from Uoti Urpala).
+ 
+Wreckage color was changed to red (pointed out by Espen Skoglund).
+But deadly wreckages are still painted in white.
+
+When the client has set the sparkProb option to 0 then the
+server will not send wreckages when they are not deadly.
+
+Ben Jackson submitted fixes for better (in-client) handling of 
+changing power/turnspeed and the Config Window (reflecting them):
+
+    src/client/configure.c
+ 
+	Add Config_redraw() and associated support, for updating the
+	config display when parameters change.  Used below.
+ 
+	Change constraints on maxFPS from 0..30 to FPS/2..FPS.  The
+	code was always keeping the variable maxFPS in that range, but
+	the display could go one past, which was annoying.
+ 
+    src/client/client.h
+    src/client/client.c
+    src/client/paintdata.c
+    src/client/painthud.c
+ 
+	Client always ignores PACKET_SELF power/turnspeed for purposes
+	of configuration.  Now it just displays it in the meter, but
+	maybe even that is misleading?  Maybe it should only do that
+	if snooping, and otherwise display the correct values, assuming
+	autopilot is messing with them.
+ 
+    src/client/paintdata.h
+    src/client/paintdata.c
+ 
+	New global `snooping' which is true whenever we're watching
+	another player instead of ourselves.
+ 
+	Since server never calls Send_eyes() (?!?!?!) the client now
+	makes a best guess -- it assumes that the player at the center
+	of the display is the player we're watching, especially if it's
+	the player himself!
+ 
+    src/client/xevent.c
+ 
+	KEY_SWAP_SETTINGS uses a heuristic to guess if the server will
+	accept this keystroke, and if it thinks so it sends the keystroke
+	and ALSO swaps the settings locally, and updates the config
+	display.
+ 
+	KEY_INCREASE_POWER, KEY_DECREASE_POWER, KEY_INCREASE_TURNSPEED
+	and KEY_DECREASE_TURNSPEED are all done in-client now.  The client
+	sends the new absolute value.  This is probably the Right Thing
+	anyway, and it's necessary since we now ignore the PACKET_SELF
+	power/turnspeed values.
+ 
+    src/common/pack.h
+    src/server/netserver.c
+ 
+	New magic version 0x4200.
+ 
+	old clients->new server: power/turnspeed while autopiloting are ignored
+				 by server to avoid having people set values
+				 relative to the autopilot values
+ 
+	new clients->old server: power/turnspeed are not corrupted by autopilot
+				 but the old server will lose the value.  I
+				 tried having the new client send the values
+				 whenever it sees the autopilot light go off,
+				 but due to a combination of bugs in the
+				 OLD server this is disasterous.
+ 
+	new clients->new server: power/turnspeed sent while autopiloting set
+				 the saved values and are used as soon as
+				 autopilot is off
+ 
+	The disasterous bug mentioned above is caused by being able to
+	set pl->turnspeed while autopiloting in older servers.  That
+	can't happen anymore because it's either ignored (old clients)
+	or put into the save values (new clients).
+ 
+    src/server/object.h
+    src/server/update.c
+ 
+	Autopilot no longer saves/restores turnacc -- was irrelevant anyway,
+	since it is immediately recomputed.
+
+A frame counter for balls was added (from Uoti Urpala's patch).
+
+Parking on the base is easier now (also due to harder debris) : the allowed
+maximum speed is increased.
+
+Ignore client maxFPS request if it is 20 (the client default setting)
+and if serveroption `ignore20MaxFPS' is true (default), by Uoti Urpala.
+
+The client knows about talk macros now (Jonny Svärling, Adam Lorentzon)
+modified: macros work also properly in teammode when one is dead.
+See doc/README.talkmacros.
+
+Guido Koopman submitted a patch for a new armor item:
+    - one new item: armor. If shields are not used/available, an armor item
+      can absorb a specified number of hits before the player is killed.
+      The idea is to bridge the gap between un- and shielded games.
+    - Three new options: initialArmor, maxArmor and itemArmorProb.
+      With defaults of 0, 10 and 1e-9.
+
+Only check for robot leaving when it is not transported to its homebase.
+This leaves the shots from a dead robot in the game a bit after it dies.
+
+TkXpInterface had a problem accessing temp_dir in a subroutine where
+it was not declared as a global variable.
+
+The Makefile of maps2image had some problems.
+
+Fixed incorrect use of rand throughout the server.  The problem with
+most rand implementations is that the low order bits are not very
+random at all.  Therefore almost all uses of rand have been replaced
+with rfrac.
+
+Now larger map areas can be viewed when using larger scaleFactors on 
+big screens.  Try "xpilot -scaleFactor 2.5 -geometry 1280x1024".
+
+When using pointercontrol, configuring turning settings is easier now:
+Setting it to zero makes the server completely ignoring it.
+
+A first cut at a graphical user interface to the meta server.
+This is still very very alpha.  It works, but not everything.
+
+Ship shize increased from 14 to 16 due to `analytical collision detection'
+which inspects a real circle and not just a square anymore.
+
+Claus Leth Gregersen submitted a big patch:
+    - Introduced a new key for swapping scale factor settings.
+    - Fixed a slight bug in a MS-Windows paletterealization.
+    - Moved all the painting logic expect the linedrawing for the blocks
+    into guimap.c, added a border around the updated area too.
+    - Moved all functionality out from the key_press switch into seperate
+    functions.
+    - Extracted the function from xevent and put them in a new file
+    xeventhandlers.c, those functions only used in this new
+    file was also moved.
+    - Fixed the windows mouse bug with a hack, fixed a few compile problems.
+
+To prevent cheating the order in which information is send from the server
+to the client about players and objects is now permuted.
+
+Guido Koopman submitted a patch for team cannons hitting cannons of another
+team:
+    - added some extra checks to FROMCANNON objects hitting a cannon to allow
+    cannons to be killed by cannons from opposing teams. They don't actually
+    aim or fire at the other cannons, but a shot could accidently hit them when
+    it misses a player.
+
+Jarrod Miller submitted a patch which fixes the orientation of bases that sit
+on the edge of a map when edge wrap is on and a base orientor on the opposite
+edge should be accounted for.
+
+Claus Leth Gregersen fixed portability problems for Windows and
+submitted several patches to improve the way the graphics drawing
+code is organized.
+
+===============================================================================
+
+This is a summary of changes of release 4.1.0 compared to release 4.0.0.
+
+Fixed a bug which caused some valid hostnames to be rejected.
+
+Changed the Imakefile for better compilation on Solaris 2.6 with gcc.
+
+Sven Mascheck fixed a bug which could cause the playing window to remain
+blue after being ECMed.  This bug only occurred in erase mode.
+
+Guido Koopman contributed a bit patch with several new features:
+    adds/fixes the following:
+    - new item: mirror. reflects laser pulses. usual options with usual defaults.
+      doesn't need turning on or off and uses no fuel. each additional mirror
+      halves the chance a pulse gets through.
+    - cannons now use all offensive and semi-offensive items. see cannon.[ch] for
+      lots of comments.
+    - option cannonsUseItems replaces cannonsPickupItems. old option now used as
+      alternative spelling. if on, cannons don't pickup, get or use items.
+      default is off, to keep the conservative majority from complaining.
+    - new option cannonItemProbMult. if 0.0, cannons don't get items, except for
+      the initial items, but can still pickup or steal them. 1.0 means each
+      cannon gets an item once per minute on average. default is 1.0.
+    - resubmission of min/maxRobots options. see previous patch for info.
+    - new option resetOnHuman. if >0, the round/race is restarted when the < Nth
+      human player logs on. handy if you don't want to wait for the robots to
+      finish the round/race.
+    - new option teamCannons. when on, cannons don't activate on teammembers.
+      with teamImmunity on, players can't be hit by fire from their team's cannons
+      and can also fly through them. default off.
+    - new option teamFuel. when on, players can't refuel at fuelstations owned by
+      other teams. default off.
+    - new option keepShots. when on, mines/missiles/shots are made anonymous when
+      a player leaves the game, instead of being deleted. default off.
+    - new option wormTime. gives the number of seconds wormholes remain stable
+      ie. connected to the same out or inout wormhole. if 0, a new wormhole is
+      searched every time a player passes through it. other objects are only warped
+      while the wormhole is stable. if 0, a wormhole remains stable for other
+      objects until a new player passes through it. default is 0.
+    - alternate version of the recent (few months ago) nasty looking shots hack.
+      shots look like '+' or 'x' (chosen randomly).
+    - removed maxima for lasers and tractorbeams. maximum can now be set by
+      max<item>s up to 99.
+    - no more gaining lots of points by killing your own tanks. killing your own
+      tank now counts as killing a teammate.
+    - reimplemented deflector code. shots fired horizontally or vertically used
+      to gain extra speed from deflectors (no longer so) and more than ~15
+      deflectors were clipped by the collision checking code (also solved).
+      deflectors might feel a little different, but not much has changed.
+    - fixed yet another bug in Pick_team function which caused TEAM_NOT_SET to
+      be returned even if free bases were available.
+    - stun lasers now disable thrust, shields and shots for 5 frames. enforced
+      because robots could otherwise not be stunned (they turn those on again
+      every frame).
+    - having emergency shields on now allows you to fly against cannons without
+      dying. the cannon still dies and points are awarded as usual for killing
+      the cannon.
+    - heatseekers now target the engine instead of the center of the ship. this
+      seemed more realistic, but you don't see much of it.
+    - implosive mines/missiles are now as powerful as normal ones. they used to
+      be only half as powerful.
+    - hyperjumping leaves behind two wormholes, one inhole and one outhole. these
+      wormholes are removed after wormTime seconds or 1 second if wormTime is 0.
+    - robots try to thrust through walls less often. this was caused by a bug in
+      the goto cannon/fuelstation code.
+    - robots now go after loose balls too. before, they only navigated to treasure
+      boxes.
+    - Ben Aveling added a hack to make robots consider only 1000 objects to prevent
+      server lag when a nuke went off. this caused problems on some maps.
+      increased this number to 2000.
+    - robots now also use lasers on other players than the ones they are at war
+      with.
+    bugs left:
+    - cannon mode 3 doesn't check for walls between cannon and victim.
+    - temporary wormholes don't show up on screen even if wormholeVisible is on,
+      because they are not transmitted to the client.
+    - emergency don't protect you from treasure boxes.
+    - maximum number of tanks is still 8.
+    - team owned fuelstations or cannons are not displayed differently from normal
+      fuelstations/cannons. problem: the current way maps are encoded before
+      transmission to the client has not enough unused bits.
+    - lifetime of laser pulses is too short for reflected pulses to be harmful to
+      others.
+    - new deflector code seems to slow down the server when lots of objects are
+      present.
+    - cannons don't use defensive items yet.
+    - the new 'nasty' shot look is hardcoded, ie. there's no way to turn it off.
+    fun things to do:
+    - tell me what you think about everything I changed since v3.6.2. please. the
+      amount of feedback I get from others than the XPilot developers makes me
+      think I'm the only one who is actually interested in the time I put into
+      hacking XPilot.
+    - well, just try out everything this patch adds. I had a lot of fun coding it,
+      so I expect you (the people who play XPilot for a living) to have at least
+      as much fun using it.
+
+Guido Koopman added some improvements over his big 4.0.0 patch:
+    adds/fixes the following:
+    - used RES/3 in Cannon_throw_items instead of CANNON_SPREAD.
+    - resetOnHuman only reset the game when the =< N-1st player entered
+      works as it should now, <= Nth.
+    - the object-out-of-map bug was apparently caused by items not having the
+      correct direction (tsin/tcos use lookup tables!). fixed in both Place_item
+      and Cannon_throw_items.
+    - Do_deflector was a little slow. rearranging the various tests and adding
+      a new one to get rid of unwanted objects quickly helps (profiling shows
+      50% less time spent in Do_deflector).
+    - tried to speed up robot code.
+    - check on BIT(pl->have, ITEM_DEFLECTOR) caused robots to almost always turn
+      on deflectors (even if itemDeflectorProb == 0). replaced ITEM_DEFLECTOR with
+      OBJ_DEFLECTOR.
+    - ROB_LOOK_AH was 2, even though robots check for possible collisions every
+      frame. removed ROB_LOOK_AH.
+    - possible use of ECMs and tanks as defense against missiles/mines was only
+      checked for when object was already within shield_range. checking is now
+      done earlier.
+    - replaced LENGTH() macro by QUICK_LENGTH() or VECTOR_LENGTH() in some
+      places.
+    fun things to do:
+    - use a profiler more often.
+
+Guido Koopman contributed more small improvements:
+    adds/fixes the following:
+    - in various places, both Wrap_length and Wrap_findDir were used on the same
+      values.
+      replaced with WRAP_DX, WRAP_DY, LENGTH and findDir to eliminate overhead.
+    - removed some unused/unnecessary stuff from Make_debris and Make_wreckage.
+    - in cmdline.c, wormTime was declared as valSec, but it was used in update.c
+      as meaning ticks.
+      added '* FPS'.
+    - with wormTime set to 0, temporary wormholes were given a countdown of 1
+      tick. this caused problems when a wormhole was removed between a player
+      hitting it and being warped.
+      don't add wormholes when wormTime == 0 and remove both wormholes at once.
+    - added QUICK_LENGTH check to robot collision checking loop to get rid of
+      out-of-range objects quickly.
+    - robot collision checking on laser pulses could go wrong at map edges
+      because LENGTH was used instead of wrapped LENGTH.
+    - hyperjumping could cause problems when no empty space was found in 20
+      samples. w.x, w.y would then point to a wall or so.
+      hyperjumps to original location in that case now.
+    bugs left:
+    - there are still some strange tests in Make_debris/Make_wreckage which seem
+      unnecessary.
+    - should I have left that last 'problem' (^^) in as a feature?
+    fun things to do:
+    - run a profiler to see if XPilot is any faster now.
+
+Added a debugaudio.c to the client to debug sound problems.
+
+Changed the test for the existence of a xpilot host in the local DNS domain.
+This slowed down startup considerably when DNS searches weren't limited to
+one domain.  Now if the local domain can be found only xpilot for that single
+domain is tried.
+
+Sven Mascheck contributed code to make the ERASE hack a client commandline option.
+He also found out why sometimes the screen remains blue after an ECM.
+
+Added Rakk & Murx's analytical collision detection patch.
+
+Fixed a bug which would allow dead players to lock on any other player
+even if lockOtherTeam was false.
+
+Don't lock closest on paused players.  Thanks to Sven Mascheck.
+
+Added a new client option -ignoreWindowManager.  It does what it says.
+Handy if your window manager tends to uverrule your geometry value,
+or if you think it spends to much time checking for window manager keys,
+or if it doesn't handle colormap switching well.
+
+===============================================================================
+
+This is a summary of changes of release 4.0.0 compared to release 3.7.1
+
+The contributed packages maps2image and TkXpInterface have been updated.
+TkXpInterface has been updated to version 3.8.0 which supports the
+Tcl/Tk versions 8.0 patchlevel 2.
+
+Guido Koopman contributed a patch for automatically pausing idle players:
+    - Idle players are put in pause mode when they get killed. A player is idle
+      when there has been no keypress or -release for 60 seconds.
+
+Guido Koopman contributed a patch for preventing base mining:
+    - a new server option: baseMineRange
+      When set, players are not allowed to drop or throw mines within this many
+      blocks from someone's homebase. The default is 0, which allows basemining.
+
+Guido Koopman contributed a patch for a new item called deflector:
+    - a new item: deflector
+      When turned on, it pushes away objects that are moving towards your ship.
+      With more items, both the range and the force increase. The fuel cost does
+      not increase, just like with cloaks.
+    - a new server option: itemDeflectorProb
+      Default is "1e-9".
+    - a new server option: initialDeflectors
+      Default is "0".
+    - a new server option: maxDeflectors
+      Default is "10".
+    - a new client option: keyDeflector
+      Press to turn deflectors on. Press again to turn off. 
+      The default key is 'o'.
+    - incompatibility with older (i.e. plain 3.7.1 and earlier) versions
+      This comes from a different packet for item counts and affects both the
+      server and the client. The new version number is 3503 (v3.5.0 and later
+      used 3500, 3501 is used by the hyperjump patch and 3502 by the phasing
+      device patch).
+
+Guido Koopman contributed a patch for a new item called hyperjump:
+    - a new item: hyperjump
+      When used, it teleports the player to a random map location.
+    - a new server option: itemHyperJumpProb
+      Default is 1e-9.
+    - a new server option: initialHyperJumps
+      Default is 0.
+    - a new server option: maxHyperJumps
+      Default is 10.
+    - a new client option: keyHyperJump
+      Press key to activate and use a hyperjump.
+      Default key is 'q'.
+    - incompatibility with older (i.e. plain 3.7.1 and earlier) versions
+      This comes from a different packet for item counts and affects both the
+      server and the client. The new version number is 3501 (3.5.0 and later
+      used 3500).
+
+Guido Koopman contributed a patch for programmer privileges:
+    - the owner of a server can always watch other players in pause mode, not
+      just when they are on the same team.
+    - the owner of a server always gets the full framerate, not 1/3.
+    - these are not meant for cheating, but for robot developers to see how the
+      robots actually behave.
+    - ownership of the server is determined by checking the login name and the
+      network address of the client. The login name should be the same as the
+      one used to start the server and the network address should be 127.0.0.1
+      ie. localhost.
+
+Guido Koopman contributed a patch for a new item called phasing:
+    - a new item: phasing device
+      This item gives you four seconds in which you can fly through literally
+      everything. This in turn makes you invulnerable. On the other hand, you
+      also can't pick up items or balls, refuel, repair, fire, ecm, transport
+      or whatever, except fly around. Think of it as being in a different
+      dimension as the rest of the game. Nothing that happens there can affect
+      you, but you can't affect the game either. Any balls connected to your
+      ship when you turn on the phasing device are also phased. This only works
+      if they are connected by a solid line. The dashed connector lines are
+      broken by phasing. Any items you drop while phased are destroyed, whatever
+      the value of the loseItemdestroys server option. When the four second timer
+      (displayed in the same way as the emergency shield/thrust, shutdown and
+      selfdestruct timers) runs out, you drop back to normal space. Anything that
+      is still (partially) inside a wall when the timer runs out, is destroyed by
+      a wallcrash. A phased ship is drawn with dashed lines, like a cloaked ship,
+      but visible. You can still use shields (not useful) andcloaks when phased.
+    - a new server option: itemPhasingProb
+      Default is 1e-9.
+    - a new server option: initialPhasings
+      Default is 0.
+    - a new server option: maxPhasings
+      Default is 10.
+    - a new client option: keyPhasing
+      Pree key to activate and use some of your phasing.
+      Default key is 'p'.
+    - incompatibility with older (i.e. plain 3.7.0beta and earlier) versions
+      This comes from a different packet for item counts and affects both the
+      server and the client. The new version number is 3502 (v3.5.0 and later
+      used 3500 and 3501 is used by the hyperjump patch).
+
+Guido Koopman contributed a patch for racemode:
+    - a new server option: roundDelay
+      This option gives the number of seconds the server waits before a new
+      round is started. This applies also to the first round. If a new player
+      logs in before the round has begun, the delay counter is restarted. The
+      default is "0". This keeps the first players to log in from starting
+      before the last one logs in.
+    - a new server option: maxRoundTime
+      This option sets the maximum duration of a round, in seconds. If the round
+      has not ended naturally before the timer expires, it is terminated. Scores
+      are updated as usual and a new round is started. The default is "0", which
+      means unlimited. This takes care of extremely slow racers (eg. robots), who
+      keep the others waiting too long.
+    - Both of these options work in unlimited lives mode too.
+    - Base order (race mode) is used when players log in the first time too.
+      Before, it was only used after each round.
+
+Changed some default key mappings:
+    The keys moved do not affect actual gameplay.  They are setup oriented.
+    This opens up some space on the keyboard for new "action" events.
+
+    Name              old key(s)  new key
+
+    Pause             p Pause     Pause
+    SelfDestruct      q           End
+    ToggleCompass     y           KP_7
+    ToggleOwnedItems  o           KP_8
+    ToggleMessages    0           KP_9
+
+    Deflector         N/A         o
+    HyperJump         N/A         q
+    Phasing           N/A         p
+
+Rodney R. Korte ported XPilot to OS/2.
+
+The hardcoded maxima for some player item limits have
+    been raised to values suggested by Rodney R. Korte.
+
+Sven Mascheck contributed improvements for drawing the screen scaled
+while the ERASE hack is active, including a bugfix for the WINSCALE macro.
+
+Lewis W. Beard has released XPShipEditor, a Win32 ship shape editor written
+    in Visual Basic.  As of XPilot-12, XPShipEditor will be included with the 
+    Windows binaries distribution.  XPShipEditor itself included the GPLed source 
+    can be found at http://lwb.org/xpilot/
+
+Guido Koopman contributed several more bugfixes and improvements:
+    - players could protect their teams' treasure by pausing while attached to it
+      pausing now releases the ball
+    - in unlimited races, all the players had to finish before the race was over
+      instead of just one player
+      replaced check on alive players by check on finished players
+    - robots sometimes chased an item too slowly
+      added check on harvest mode before slowing down
+    - robots didn't do anything with treasures
+      robots now try to connect to every ball they encounter
+    - robots didn't repair targets
+      actually they tried to, but didn't find any targets to repair, because
+      the distance was calculated the wrong way
+      distance now calculated correctly
+    - robots didn't dodge cannon bullets
+      because trying to dodge single bullets seemed overdone
+      now they do dodge them, because cannon bullets are quite dangerous
+    - robots often got stuck hanging under walls
+      I still don't know why they did, but I commented out some code that caused it
+      robot behavior didn't change, so it wasn't very important apparently
+    - someone (I believe is was Murx) complained that robots should be more
+      aggressive against players dragging balls
+      robots are now more likely to relock on those players
+    - robots attacked their own teammates
+      they don't anymore
+    - robots wasted time shooting targets of teams with no players
+      added check on playerlessness
+    - robots wasted time refueling when they didn't need to
+      problem only occurs when there's nothing to attack nearby
+      they now only refuel up to 90%
+    - players could get killed by cannon fire before a round started
+      disabled collision checking if the start is delayed
+    - robots detected cloaked ships even when cloakedExhaust was off
+      added check on cloakedExhaust
+
+Guido Koopman contributed a patch for having robots in teammode:
+    - new server option: robotTeam
+      indicates which team to use for robots. default 0
+    - new server option: restrictRobots
+      when on, keeps robots from joining teams other than the one indicated with
+      the robotTeam option. default on
+    - new server option: reserveRobotTeam
+      when on, keeps human players from joining the team indicated by robotTeam.
+      default on
+    - before this patch, robots always left one base free for new human players.
+      they can now (if maxRobots is high enough) fill a server completely
+      that's not a problem, because robots are automatically kicked out when
+      a human player wants to join the game, even if other teams have free
+      bases left
+    - robots are kicked (if necessary) before paused humans
+    - if a human didn't indicate which team to join, it is selected for her
+      if teamAssign is on. in this selection, the robot team is avoided if
+      possible
+    cool things to do with this patch:
+    - practice your teamplay even when you're alone
+      unset restrictRobots and set maxRobots to an odd number
+      then join your favorite team (robots are autokicked if that team happens
+      to be full)
+    - find out what it is like to be on team 0
+      unset reserveRobotTeam and join team 0
+    - find out how good these new (since the fix380-3 patch) robots really are
+      set robotTeam to something other than 0 (on most maps, team 0 is either
+      not available or very different from the other teams) and turn on
+      restrictRobots to keep them from joining other teams, then join an other
+      team
+    - find bugs in the teampicking and autokicking code
+      try out weird settings for robotTeam, restrictRobots, reserveRobotTeam,
+      maxRobots, teamAssign and mapFile in combination with different numbers
+      of human players
+
+Guido Koopman contributed several bugfixes:
+    - robots weren't kicked out of team games when a human player didn't specify
+      a team to join
+    - while firing, press phasingdevice key. when phasing ends, firing resumes
+      bug caused by keyrelease event being ignored while phased
+      only keypresses are ignored now
+    - robots that were killed in this round (limitedlives mode) are removed from
+      the game before the next round starts
+      I find it confusing to have different robots in my team every round, so
+      I disabled removal of robots in teamplay mode. use robotsleave options to
+      get robots out if you want
+    - robots weren't allowed to completely fill a server (ie. occupy all homebases)
+      I fixed that in the last fixpatch I submitted, but it was put back, probably
+      because of #1 (see ^)
+    - robots tried to kill phased ships
+    - robots picked up fuel items they didn't need
+    - robots didn't turn off cloaks when putting up shields
+      caused them to get shot/crash into wall when cloakedShield was off
+    - robots reconnected to balls they had just thrown
+      added 3 secs delay between detach and connect to any ball
+    - robots with large shipshapes got stuck on their bases
+      fixed by forcing thrust on when in homebase block
+    - phasingdevice/em.thrust/em.shield were turned off after each item ran out
+      next item is now automatically used
+    - implemented ball_handler in robotdef.c
+    bugs left:
+    - robots fly too fast when stealing treasures
+    - robots ignore balls outside treasureboxes
+    - robots ignore targets and other players when stealing treasures
+    - robots don't avoid balls (ie. they crash into them a lot)
+    - set rounddelay > 0 and before the counter reaches 0, turn on pause when
+      ships are replaced by numbers. for the rest of the round, all ships are that
+      number
+    - robot navigation still sucks (now also used in ballstealing code)
+    - I probably forgot some bugs
+    fun things to try:
+    - start server with a map with lots of open space and easy-to-get-to treasures
+      add a few (1..3) robots and enter pause mode. now watch the robots steal the
+      treasures and throw them into their own treasures. neat eh? works on maps
+      with less open space too, but you don't get long throws then
+
+Guido Koopman (Big Dog)
+Espen Skoglund contributed a patch for displaying ship wreckage parts when a
+ship explodes.
+
+The official XPilot map filename extension is now .xp.
+The .map extension still works but is deprecated.
+
+The fuel drainfactor feature from 3.7.0 is removed.
+
+The client now strips any control characters from server status reports.
+This should prevent garbage output on xterms (Winfried Truemper).
+
+The server now better checks client input parameters like user names
+and hostnames.
+
+Servers report the number of free homebases for each team to the meta server.
+
+The mouse pointer is now better centered in the talk window (Sven Mascheck).
+
+Guido Koopman contributed more code:
+    adds/fixes the following:
+    - new client option: refreshMotd. When on, a fresh version of the server MotD
+      is requested every time it is displayed. Default off. Handy for those
+      servers with ranking tables in the MotD.
+    - color for wreckage changed from RED to WHITE. Since wreckage consists of
+      parts of ships, I thought it should look like that, and ships are white.
+    - targets are now correctly displayed in targetRadarColor (was wallRadarColor).
+    - removed constraint on radar colors which kept me from using red and white.
+    - removed PAUSEd check from TEAM() macro. It caused negative points for kills
+      made while paused (eg. with mines).
+    - new server option: allowViewing. When on, every player is allowed to watch
+      any other player when paused, waiting or dead. Default off. Because this is
+      meant for inexperienced players, the framerate is not lowered to 1/3.
+    - new server option: wreckageCollisionMayKill. When on, being hit by wreckage
+      unshielded is deadly. Default off. Don't kill players from too close when
+      shields are not allowed and this option is on.
+    - new server options to tune scoring for various kinds of killing:
+      option:                   desc.:                      default:
+      shotKillScoreMult         ordinary bullet kills       1.0
+      torpedoKillScoreMult      direct torpedo hits         1.0
+      smartKillScoreMult        direct smart missile hits   1.0
+      heatKillScoreMult         direct heatseeker hits      1.0
+      clusterKillScoreMult      kills by cluster debris     1.0
+      laserKillScoreMult        laser kills                 1.0
+      tankKillScoreMult         tank runovers               0.44
+      runoverKillScoreMult      personal runovers           0.33
+      ballKillScoreMult         ball kills                  1.0
+      explosionKillScoreMult    'succumbed to explosion'    0.33
+      shoveKillScoreMult        assistance in wallcrashes   0.5
+      The actual score is calculated by multiplying the rated score (10 points for
+      players with equal score, less for players with score lower than yours, etc.)
+      with this factor. The factor for tank kills is an approximation of what it
+      used to be (tank's score = player's score - 500).
+    - new server option: crashScoreMult. Default 0.33. For crashing with another
+      player.
+    - new server option: mineScoreMult. Default 0.17. For hitting a mine.
+    - new server option: cannonSmartness. Can take four values. 0 gives really
+      dumb cannons that only fire straight ahead when a player is near. 1 is the
+      default and gives normal cannons that fire in a random direction when a
+      player is near. 2 gives cannons that fire more or less (small random error)
+      in the direction of the player who activated the cannon (ie. the first player
+      who is within range). If the player is not in front of the cannon (cannondir
+      +/- 60 degrees) it fires as close as possible. 3 gives the smartest cannons
+      (for now) that fire at the nearest player in front of the cannon. If there
+      is no player in front of the cannon (defined as above), the cannon won't
+      fire. Also, it doesn't aim at the player directly, but calculates where that
+      player will be when the shot reaches her. The default is 1.
+    - new server option: cannonsPickupItems. When on, items that hit a cannon are
+      added to that cannon's inventory, instead of just passing through it. Default
+      is off.
+    - For now the only items useful to cannons are wideangles and sensors. Sensors
+      are used to increase the activation range for one cannon. Cannons get the
+      same items as players initially. The smarter the cannon, the narrower the
+      stream of bullets it fires with wideangles.
+    - ecms disable cannons temporarily. The formula used is the same as that for
+      players. Having more sensors decreases the time a cannon is disabled.
+    - added check on rdelay > 0 in LaserCollision. Not executing LaserCollision
+      caused laser pulses to remain in the air between rounds.
+    - half-used phasing devices are now counted as defensive items too. Before,
+      only unused phasing devices were counted.
+    - added check on rdelay == 0 to KEY_SHIELD release to keep players from
+      lowering shields before a round starts.
+    - moved cannon activating code from frame.c to update.c. Cannons didn't
+      activate on robot players which gave them an unfair advantage, especially
+      with smartcannons.
+    - removed NOT_CONNECTED check in round delay countdown in the hope of curing
+      the problem where going into pause causes ships to remain digits forever.
+    - changed maximum speed of cluster debris when DRAINFACTOR is defined to
+      5 * minimum speed. This lowers the drain from one cluster particle from
+      +/- 1275 to +/- 25 times the drain of a standard bullet. Still a lot, but
+      that's cluster debris.
+    - cannon explosions now also generate wreckage.
+    - added longterm_mode to default robot struct. The robot_mode was only used
+      for calculations in one frame. longterm_mode is supposed to give them a
+      little longer memory.
+    - added some extra checks to keep robots from going after useless items.
+    - robots now also hyperjump for torpedoes.
+    bugs left:
+    - I'm not sure I cured the ships turning into digits bug.
+    - I'm not sure about the radar colors (I have only tested it on a truecolor
+      display without DB).
+    - no options to tune scoring for player vs. world (ie. wallcrashes,
+      cannonkills, etc.) yet.
+    - smartcannons don't use anything fancy yet. The problem is that most items
+      can only be used by players.
+    - aiming of smartcannons in mode 3 is off by about 1/2 ship size, or 1/2
+      block_sz, or 3 degrees, or .. (ie. I don't know what causes it). It's most
+      noticeable with multiple wideangles.
+    - smartcannons don't activate correctly across map edges.
+    fun things to try:
+    - any help in making the storing of things like ecms, transporters and pulses
+      more general so it can be used for cannons, would be appreciated.
+
+Guido Koopman contributed more bug fixes:
+    - activation distance for cannons changed
+      from 12*BLOCK_SZ to 0.5*VISIBILITY_DISTANCE
+    - smartcannons in mode 3 no longer fire on phased players
+    - semantics for server option maxRobots changed
+      maxRobots now specifies how many players there should be in total
+      if there are less then maxRobots players, robots will be added
+    - new server option: minRobots
+      specifies how many robots there should be at least
+      -1 sets minRobots to the same value as maxRobots
+      default is -1, which gives the old behaviour for maxRobots
+    - phasing device was not turned off when hoverpausing
+      fixed
+    - on some maps, when the robot manager tried to add a robot, the Pick_team()
+      function returned TEAM_NOT_SET even though there were free bases left
+      bug was caused by teamless bases being given to team 0 without increasing
+      the total number of bases for team 0
+      fixed
+    - deflectors are now turned on automagically when you have them
+    - Pick_team() used to avoid returning robotTeam if possible
+      Bert removed this, causing team 0 to be returned as first choice
+      put back old behaviour
+    - autopilot is now allowed when phased
+    bugs left:
+    - deflector code doesn't work OK with many (>10 or so) deflectors
+    - autopilot turns on emergency thrust, but doesn't turn it off again
+    - man pages are outdated
+
+===============================================================================
+==== $Id: ChangeLog,v 5.91 2010/02/21 15:55:17 bertg Exp $
+===============================================================================
+

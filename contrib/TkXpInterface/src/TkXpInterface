@@ -1,0 +1,3929 @@
+#!WISH -f
+#
+#
+# TkXpInterface Version VERSION - funky interface to xpilots(6)
+# Copyright (C) 1994 Ramdane Ferhati
+# Copyright (C) 1994 Yves-Henri Berne.
+# Special thanks for : Andrew Scherpbier. (for maps2image Program)
+#                      Richard Oak. (for the first version of tkxpilots)
+#
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program; if not, write to the Free Software
+#    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#
+# Changes by Bert Gijsbers to get it to work with Tcl/Tk version 8.0.
+#
+
+if { [ string compare $tcl_version 8.0 ] < 0 } {
+    puts stderr "Error: Incompatible Tcl/Tk version $tcl_version."
+    puts stderr "This version of TkXpInterface requires Tcl/Tk version 8.0 or later!"
+    exit 1
+}
+
+set temp_dir "TEMPDIR"
+set lib_dir  "LIBDIR"
+set maps_dir "MAPDIR"
+set defaults_file   "DEFAULT"
+set default_mapfile "MAP"
+set scoreTableFileName "SCOREFILE"
+set motd    "MOTDFILE"
+set zext    "ZEXT"
+set zcomp   "ZCOMP"
+set zdecomp "ZDCOMP"
+set tkversion "VERSION"
+#pingopt   "PINGOPTIONS"
+set cliopt "CLIENTOPTIONS"
+set qui    "WHOWHAT"
+set filter "METAFILTER"
+set telnet_arg "METASERVER"
+
+#colbk  = general bacground color
+#colact = general foreground color (texts)
+#coldes = foreground color of deactivated scales and scale texts.
+#colsc  = background color of scale.
+#colSe  = color of the activated buttons (when there are selected)
+
+set colbk  "COLORBAK"
+set colact "COLORACT"
+set coldes "COLORDEA"
+set colsc  "COLORSCA"
+set colSe  "COLORBUT"
+
+#
+##################################   PROCEDURES  ################################
+#
+proc maj_Robots num {
+ global maxRobots
+    set maxRobots $num
+    .mainpanel.main.check.maxRobots.scale set $maxRobots
+    catch {.botbuttons.updb.check.maxRobots.scale set $maxRobots}
+    if { $maxRobots > 0 } {
+        .topbuttons.robot configure -state normal
+        catch {.botbuttons.updb.topbuttons.robot configure -state normal}
+    } else {
+        catch { destroy .topbuttons.robotb }
+        .topbuttons.robot configure -state disabled 
+        catch {.botbuttons.updb.topbuttons.robot configure -state disabled}
+    }
+}
+##################################
+proc eq_maxfps num {
+  global maxframesPerSecond 
+     set maxframesPerSecond $num
+     catch { .mainpanel.main.check.0.maxfps.scale set $maxframesPerSecond }
+     catch { .botbuttons.metab.meta.client.scale2 set $maxframesPerSecond }
+     catch { .metab.meta.client.scale2 set $maxframesPerSecond }
+     catch { .botbuttons.locab.local.client.2.scale2 set $maxframesPerSecond }
+     catch { .metab.meta.locab.local.client.2.scale2 set $maxframesPerSecond }
+}
+##################################
+proc eq_team num {
+  global team 
+     set team $num
+     catch { .mainpanel.main.check.0.team.scale set $team }
+     catch { .botbuttons.metab.meta.client.scale set $team }
+     catch { .metab.meta.client.scale set $team }
+     catch { .botbuttons.locab.local.client.1.scale set $team }
+     catch { .metab.meta.locab.local.client.1.scale set $team }
+}
+##################################
+proc maj_buttons nom {
+ global timing teamPlay gravity onePlayerOnly
+
+  if { $nom == "onePlayerOnly" } {
+    if $onePlayerOnly {
+       .topbuttons.team configure -state disabled
+       catch { destroy .topbuttons.teamb }
+       set teamPlay 0
+    } else {
+      if $teamPlay {
+         .topbuttons.team configure -state normal
+      } else {
+          .topbuttons.team configure -state disabled
+          catch { destroy .topbuttons.teamb }
+      }
+    }
+  }
+  if { $nom == "teamPlay" } {
+    if $teamPlay {
+        set onePlayerOnly 0
+        .topbuttons.team configure -state normal
+    } else {
+       .topbuttons.team configure -state disabled
+        catch { destroy .topbuttons.teamb }
+    }
+  }
+  if { $nom == "timing" } {
+    if $timing {
+        .topbuttons.race configure -state normal
+    } else {
+       .topbuttons.race configure -state disabled
+        catch { destroy .topbuttons.raceb }
+    }
+  }
+}
+##################################
+proc mkitem_prob { w wp state } {
+  global itemProbMult   itemEnergyPackProb itemTankProb  itemECMProb \
+    itemMineProb        itemMissileProb    itemCloakProb itemSensorProb \
+    itemWideangleProb   itemRearshotProb   itemAfterburnerProb \
+    itemLaserProb       itemTransporterProb itemEmergencyShieldProb \
+    movingItemProb      maxItemDensity     destroyItemInCollisionProb \
+    detonateItemOnKillProb dropItemOnKillProb  wallBounceDestroyItemProb \
+    colsc colbk colact
+
+    label $w.msg -text "ITEM PROBABILITIES" -borderwidth 10 -fg $colact -bg $colbk
+    pack $w.msg -side top
+
+    frame $w.frame -bg $colbk
+    set k 0
+    foreach i { itemEnergyPackProb=Fuel itemTankProb=Tanks \
+       itemECMProb=ECMs itemMineProb=Mines \
+       itemMissileProb=Missiles itemEmergencyShieldProb=Shields \
+       itemCloakProb=Cloaks \
+       itemEmergencyThrustProb=Thrusts itemLaserProb=Lasers \
+       itemSensorProb=Sensors itemWideangleProb=Wide\ angles \
+       itemRearshotProb=Rear\ shots itemTransporterProb=Transporters \
+       itemTractorBeamProb=Tractor\ Beams \
+       itemAfterburnerProb=Afterburners \
+       itemAutopilotProb=Autopilots 
+       itemProbMult=Prob\ Factor } {
+        incr k 1
+        if { $k == 1 } {
+           set nf 1
+           frame $w.frame.$nf -bg $colbk
+        } elseif { $k == 7 } {
+             set nf 2
+             frame $w.frame.$nf -bg $colbk
+            } elseif { $k == 12 } {
+               set nf 3
+               frame $w.frame.$nf -bg $colbk
+              }
+        set pos [string first "=" $i]
+        set v1 [string range $i 0 [expr $pos-1]]
+        set v2 [string range $i [expr $pos+1] end]
+        upvar #0 $v1 j
+        frame $w.frame.$nf.$v1 -bg $colbk
+        label $w.frame.$nf.$v1.l -text $v2 -anchor w -fg $colact -bg $colbk
+        entry $w.frame.$nf.$v1.e -width 15 -relief sunken -bd 2 \
+              -textvariable $v1 -fg $colact -bg $colbk
+        pack $w.frame.$nf.$v1.e $w.frame.$nf.$v1.l -side left -fill both
+        pack $w.frame.$nf.$v1 -side top -fill both -expand yes
+        bind $w.frame.$nf.$v1.e <Return> " "
+    }
+
+    pack $w.frame.1 $w.frame.2 $w.frame.3 -anchor n -side left -expand yes -fill both
+    pack $w.frame -side top -expand yes -fill both -anchor c
+
+    label $w.msg2 -text "OTHER VALUES" -pady 10 -fg $colact -bg $colbk
+    pack $w.msg2 -side top
+
+    frame $w.other -bg $colbk
+    set k 0
+    foreach i { movingItemProb=Items\ appear\ as\ moving \
+       dropItemOnKillProb=Item\ drop\ when\ die \
+       destroyItemInCollisionProb=Item\ destroy\ when\ collied \
+       detonateItemOnKillProb=Items\ detonate\ when\ die\
+       maxItemDensity=Maximum\ Item\ Density \
+       wallBounceDestroyItemProb=Item\ damage\ probability } {
+        incr k 1
+	if {($state == "U") && ($k != 5)} {
+	} else {
+          if { $k == 1 } {
+             set nf 1
+             frame $w.other.$nf -bg $colbk
+          } elseif { $k == 3 } {
+               set nf 2
+               frame $w.other.$nf -bg $colbk
+              } elseif { $k == 5 } {
+                 set nf 3
+                 frame $w.other.$nf -bg $colbk
+                }
+          set pos [string first "=" $i]
+          set v1 [string range $i 0 [expr $pos-1]]
+          set v2 [string range $i [expr $pos+1] end]
+          upvar #0 $v1 j
+          frame $w.other.$nf.$v1 -bg $colbk
+          label $w.other.$nf.$v1.l -text $v2 -anchor c -fg $colact -bg $colbk
+          entry $w.other.$nf.$v1.e -width 15 -relief sunken -bd 2 \
+                -textvariable $v1 -fg $colact -bg $colbk
+          pack $w.other.$nf.$v1.l $w.other.$nf.$v1.e -side top
+          pack $w.other.$nf.$v1 -side top -fill both -expand no -padx 10 -pady 5
+          bind $w.other.$nf.$v1.e <Return> " "
+	}
+    }
+    if {$state != "U"} {
+      pack $w.other.1 $w.other.2 $w.other.3 -anchor n -side left -expand yes -fill both
+    } else {
+      pack $w.other.3 -anchor c -side left -expand yes -fill both
+    }
+    pack $w.other -anchor n -side top -expand yes -fill both
+}
+##################################
+proc mkitem_init { w wp tp } {
+  global initialFuel    initialTanks       initialECMs \
+    initialMissiles     initialCloaks      initialSensors \
+    initialWideangles   initialRearshots   initialAfterburners \
+    initialTransporters initialLasers      initialMines \
+    initialAutopilots   initialAutopilots  initialEmergencyThrusts \
+    initialEmergencyShields colsc colbk colact
+
+    catch {destroy $w}
+    toplevel $w -bg $colbk
+    wm geometry $w +[winfo rootx $wp]+[winfo rooty $wp]
+    wm title $w "Items Setup"
+    wm iconname $w "Setup"
+
+    if {$tp == "P"} {mkitem_prob $w $wp N}
+    if {$tp == "U"} {mkitem_prob $w $wp U}
+    label $w.msg1 -text "INITIAL ITEMS" -borderwidth 10 -fg $colact -bg $colbk
+    pack $w.msg1 -side top
+
+  frame $w.init  -bg $colbk
+  frame $w.init.1 -bg $colbk
+  frame $w.init.2 -bg $colbk
+  frame $w.init.3 -bg $colbk
+  set m 0
+  set k 1
+  foreach i {initialFuel=Fuel initialTanks=Tanks initialECMs=ECMs \
+     initialMines=Mines initialMissiles=Missiles \
+     initialEmergencyShields=Shields \
+     initialCloaks=Cloaks initialEmergencyThrusts=Thrusts \
+     initialLasers=Lasers initialSensors=Sensors \
+     initialWideangles=Wide\ angles initialRearshots=Rear\ shots \
+     initialTransporters=Transporters initialTractorBeams=Tractor\ Beams \
+     initialAfterburners=Afterburners \
+     initialAutopilots=Autopilots } {
+          incr m 1
+          if { $m > 6 } { set k 2 }
+          if { $m > 11 } { set k 3 }
+          set pos [string first "=" $i]
+          set v1 [string range $i 0 [expr $pos-1]]
+          set v2 [string range $i [expr $pos+1] end]
+          upvar #0 $v1 j
+          frame $w.init.$k.$v1 -bg $colbk
+          label $w.init.$k.$v1.txt -text $v2 -anchor w -fg $colact -bg $colbk
+          set val 10
+          if { $v1 == "initialFuel" } { set val 2600 }
+          scale $w.init.$k.$v1.scale -orient horizontal -from 0 -to $val  \
+            -command "set $v1" -bg $colsc -relief flat -length 150 -width 10
+          pack $w.init.$k.$v1.scale $w.init.$k.$v1.txt \
+            -side left -expand no -anchor w
+          pack $w.init.$k.$v1 -side top -expand no -anchor w
+          $w.init.$k.$v1.scale set $j
+      }
+    pack $w.init.1 $w.init.2 $w.init.3 -anchor n -side left -expand yes -fill both
+       button $w.ok -text OK -fg $colact -bg $colbk -command "destroy $w"
+       pack $w.init $w.ok -side top -expand yes -fill both
+}
+##################################
+proc mkupdserver { w wp } {
+ global maxRobots colbk colact colsc messts colSe lock shutd
+
+    catch {destroy $w}
+    toplevel $w -bg $colbk
+    wm geometry $w +[winfo rootx $wp]+[winfo rooty $wp]
+    wm title $w "Update Server"
+    wm iconname $w "Update"
+
+   frame $w.topbuttons -bg $colbk
+   set y .topbuttons
+   set z $w.topbuttons
+   button $z.weapon -text "Weapons" -command "tmkweapon $y.weaponb $z U " -fg $colact -bg $colbk
+   button $z.team   -text "Team"    -command "tmkteam   $y.teamb $z U " -fg $colact -bg $colbk
+   button $z.race   -text "Race"    -command "tmkrace   $y.raceb $z U " -fg $colact -bg $colbk
+   button $z.misc   -text "Misc."   -command "tmkmisc   $y.miscb $z U " -fg $colact -bg $colbk
+   button $z.radar  -text "Radar"   -command "tmkradar  $y.radarb $z U " -fg $colact -bg $colbk
+   button $z.robot  -text "Robots"  -command "tmkrobot  $y.robotb $z U " -fg $colact -bg $colbk
+   button $z.shield -text "Shield"  -command "tmkshield $y.shieldb $z U " -fg $colact -bg $colbk
+   button $z.items -text "Items setup" -fg $colact -bg $colbk \
+          -command "mkitem_init $y.itemsb $z U "
+
+   pack $z.weapon $z.team $z.race $z.misc $z.radar $z.robot \
+        $z.shield $z.items -side left -expand yes -fill both
+   pack $z -side top -expand yes -fill both
+
+   mkcheck $w.check U
+   pack $w.check -side top -expand yes -fill both
+
+  if {[info exists shutd] == 0 } { set shutd 0 }
+  frame $w.s -bg $colbk
+  label $w.s.txt2 -text "Shutdown (seconds)\ \ \ " -fg $colact -bg $colbk
+  entry $w.s.e -relief sunken -bd 2 -textvariable shutd \
+        -fg $colact -bg $colbk -width 5
+  checkbutton $w.s.lock -text "Lock the game" -anchor w \
+     -variable lock -relief flat -selectcolor $colSe -fg $colact -bg $colbk
+  bind $w.s.e <Return> " "
+
+  pack $w.s.e $w.s.txt2 $w.s.lock -side left -anchor c
+
+  frame $w.frame3 -bg $colbk
+  label $w.frame3.l -text "Message to send" -anchor c -fg $colact -bg $colbk
+  pack $w.frame3.l  -side left -expand no
+  entry $w.frame3.e -relief sunken -bd 2 -textvariable messts -fg $colact -bg $colbk
+  pack  $w.frame3.e -side right -expand yes -fill x
+  bind $w.frame3.e <Return> " "
+
+  frame $w.but -bg $colbk
+  button $w.but.app -relief raised -fg $colact -bg $colbk -width 26 \
+              -text "Apply to the local server" -command "
+                      $w.but.app configure -relief sunken -text Applying...
+                      update
+                      update_server
+                      destroy $w
+                      "
+  button $w.but.can -text Cancel -fg $colact -bg $colbk -width 26 -command "destroy $w"
+  pack $w.but.app $w.but.can -side left -expand yes -fill both
+  pack $w.but -side bottom -expand yes -fill both
+  pack $w.frame3 -side bottom -expand no -fill x -pady 10
+  pack $w.s -side bottom -pady 10
+
+ $w.check.maxRobots.scale set $maxRobots
+}
+##################################
+proc Robots_leaving w {
+    global robotsLeave colact coldes
+
+  set etat "disabled"
+  set coul $coldes
+  if $robotsLeave {
+    set etat "normal"
+    set coul $colact
+  }
+  $w.robotLeaveRatio.scale configure -state $etat
+  $w.robotLeaveLife.scale  configure -state $etat
+  $w.robotLeaveScore.scale configure -state $etat
+  $w.robotLeaveRatio.txt   configure -fg $coul
+  $w.robotLeaveRatio.scale configure -fg $coul
+  $w.robotLeaveLife.txt    configure -fg $coul
+  $w.robotLeaveLife.scale  configure -fg $coul
+  $w.robotLeaveScore.txt   configure -fg $coul
+  $w.robotLeaveScore.scale configure -fg $coul
+}
+##################################
+proc lim_worldLives w {
+  global limitedLives colact coldes
+
+  if {$limitedLives == 0} {
+        $w.worldLives.txt   configure -fg $coldes
+        $w.worldLives.scale configure -fg $coldes
+        $w.worldLives.scale configure -state disabled
+  } else {
+        $w.worldLives.txt   configure -fg $colact
+        $w.worldLives.scale configure -fg $colact
+        $w.worldLives.scale configure -state normal
+  }
+}
+##################################
+proc no_visibility w {
+    global playersOnRadar colact coldes
+
+  if $playersOnRadar {
+        $w.limitedVisibility configure -state normal
+        $w.limitedVisibility configure -fg $colact
+  } else {
+        $w.limitedVisibility configure -state disabled
+        $w.limitedVisibility configure -fg $coldes
+  }
+}
+##################################
+proc no_shield w {
+     global allowShields colact coldes
+
+  if $allowShields {
+        $w.shieldedItemPickup configure -state normal
+        $w.shieldedItemPickup configure -fg $colact
+        $w.shieldedMining     configure -state normal
+        $w.shieldedMining     configure -fg $colact
+  } else {
+        $w.shieldedItemPickup configure -state disabled
+        $w.shieldedItemPickup configure -fg $coldes
+        $w.shieldedMining     configure -state disabled
+        $w.shieldedMining     configure -fg $coldes
+  }
+}
+##################################
+proc gravity_check { but { w .mainpanel.main.whichmap.bitmap }} {
+    global gravityClockwise gravityAnticlockwise \
+           gravityLine  gravityPointSource colact coldes
+
+	upvar #0 $but tmp
+	if $tmp {
+		$w.b.gravityClockwise deselect
+		$w.b.gravityAnticlockwise deselect
+		$w.l.gravityLine deselect
+		$w.l.gravityPointSource deselect
+    		catch { $w.b.$but select }
+    		catch { $w.l.$but select }
+	} else {
+    		catch { $w.b.$but deselect }
+    		catch { $w.l.$but deselect }
+	}
+
+    if { $but=="gravityPointSource" } {
+    	if $gravityPointSource { set gravityLine 0
+    	} else { set gravityLine 1 }
+    } else {
+    	if $gravityLine { set gravityPointSource 0
+    	} else { set gravityPointSource 1 }
+    }
+    if {$gravityPointSource == 0} {
+        $w.p.gravityPointentry configure -state disabled
+        $w.p.gravityPointlabel configure -fg $coldes
+        $w.a.gravityAngleentry configure -state normal
+        $w.a.gravityAnglelabel configure -fg $colact
+
+    } else {
+        $w.p.gravityPointentry configure -state normal
+        $w.p.gravityPointlabel configure -fg $colact
+        $w.a.gravityAngleentry configure -state disabled
+        $w.a.gravityAnglelabel configure -fg $coldes
+
+    }
+   setbitgra .mainpanel.main.whichmap.bitmap.c
+}
+##################################
+proc edges { w but } {
+    global edgeBounce edgeWrap extraBorder WidthL HeightL
+
+    $w.e.edgeWrap deselect
+    $w.e.extraBorder deselect
+    $w.e.edgeBounce deselect
+    $w.e.$but select
+
+    set c .mainpanel.main.whichmap.bitmap.c
+    $c delete btmed
+    if $edgeBounce {
+       $c create rectangle 4 4 [expr $WidthL-0] [expr $HeightL-0] -width 2 -tag btmed
+    } elseif $extraBorder {
+        $c create rectangle 4 4 [expr $WidthL-0] [expr $HeightL-0] -width 4 -tag btmed
+    }
+}
+################################### 
+proc metaserversort { w wp } {
+    global metsens colact colbk colSe qui \
+       s1 s2 s3 s4 s5 s1v s2v s3v s4v s5v
+
+    set wor $w
+    set w $w.meta.sort
+    catch {destroy $w}
+    toplevel $w -bg $colbk
+    wm geometry $w +[expr 10+[winfo rootx $wp]+[winfo reqwidth $wp]]+[expr [winfo rooty $wp.f.sort]-265]
+    wm title $w "Meta-Server"
+    wm iconname $w "Radiobuttons"
+    label $w.msg -text "Current servers sorted by :" -fg $colact -bg $colbk
+    frame $w.frame -borderwidth 1 -bg $colbk
+    frame $w.frame2 -bg $colbk
+    pack $w.msg -side top
+    pack $w.frame -side top 
+    pack $w.frame2 -side bottom -fill both -expand yes
+
+    frame $w.frame.left -bg $colbk
+    frame $w.frame.right -bg $colbk
+    pack $w.frame.left $w.frame.right -side left -expand yes
+    checkbutton $w.frame.left.s1v -text "$s1v Frames per second" -width 20 -anchor w \
+            -variable s1 -relief flat -selectcolor $colSe -command "setsort $w s1" -fg $colact -bg $colbk
+    checkbutton $w.frame.left.s2v -text "$s2v Number of users" -width 20 -anchor w \
+            -variable s2 -relief flat -selectcolor $colSe -command "setsort $w s2" -fg $colact -bg $colbk
+    checkbutton $w.frame.left.s3v -text "$s3v Map names" -width 20 -anchor w \
+            -variable s3 -relief flat -selectcolor $colSe -command "setsort $w s3" -fg $colact -bg $colbk
+    checkbutton $w.frame.left.s4v -text "$s4v Version number" -width 20 -anchor w \
+            -variable s4 -relief flat -selectcolor $colSe -command "setsort $w s4" -fg $colact -bg $colbk
+    checkbutton $w.frame.left.s5v -text "$s5v Countries" -width 20 -anchor w \
+            -variable s5 -relief flat -selectcolor $colSe -command "setsort $w s5" -fg $colact -bg $colbk
+
+    pack $w.frame.left.s1v $w.frame.left.s2v $w.frame.left.s3v $w.frame.left.s4v \
+            $w.frame.left.s5v -side top -pady 2 -anchor w
+    radiobutton $w.frame.right.b1 -fg $colact -bg $colbk -text "Ascending" \
+            -variable metsens -relief flat -value 0 -selectcolor $colSe
+    radiobutton $w.frame.right.b2 -fg $colact -bg $colbk -text "Descending" \
+            -variable metsens -relief flat -value 1 -selectcolor $colSe
+    pack $w.frame.right.b1 $w.frame.right.b2 \
+         -side top -pady 2 -anchor w
+
+    button $w.frame2.ok -fg $colact -bg $colbk -text OK -command "
+                  destroy $w 
+                  update_remotelist $wor $wp.c"
+    pack $w.frame2.ok -side left -expand yes -fill both
+
+    foreach i { s1v s2v s3v s4v s5v } {
+        upvar #0 $i j
+        if {$j == 0} { $w.frame.left.$i deselect
+        } else { $w.frame.left.$i select }
+    }
+}
+##################################
+proc setsort { w sx } {
+  global s1 s2 s3 s4 s5 s1v s2v s3v s4v s5v smax
+
+  upvar #0 $sx j
+  set z "v"
+  upvar #0 $sx$z k
+  if $j {
+       incr smax 1
+       set k $smax
+  } else {
+       incr smax -1
+       if {($s1v>$k) && ($sx!="s1")} { incr s1v -1}
+       if {($s2v>$k) && ($sx!="s2")} { incr s2v -1}
+       if {($s3v>$k) && ($sx!="s3")} { incr s3v -1}
+       if {($s4v>$k) && ($sx!="s4")} { incr s4v -1}
+       if {($s5v>$k) && ($sx!="s5")} { incr s5v -1}
+       set k 0
+  }
+    $w.frame.left.s1v configure -text "$s1v Frames per second"
+    $w.frame.left.s2v configure -text "$s2v Number of users"
+    $w.frame.left.s3v configure -text "$s3v Map names"
+    $w.frame.left.s4v configure -text "$s4v Version number"
+    $w.frame.left.s5v configure -text "$s5v Countries"
+}
+##################################
+proc mkmetaserver w {
+  global metsort oldmetsort colbk colact coldes colsc maxframesPerSecond \
+         remoteServer team client cfont nick qui cmpt temp_dir
+
+    set remoteServer "No remote server selected"
+    if {$client == 1 } {
+       wm minsize . 840 535
+       #wm maxsize . 840 535
+       frame $w -bg $colbk
+       pack $w -expand yes -fill both
+    } else {
+      catch {destroy $w}
+      toplevel $w -bg $colbk
+      wm geometry $w +[winfo rootx . ]+[winfo rooty . ]
+      wm title $w "Set of active servers"
+      wm iconname $w "Servers"
+      wm minsize $w 700 535
+      #wm maxsize $w 700 535
+    }
+    set wor $w
+    set w $w.meta
+    frame $w -bg $colbk
+    frame $w.f -bg $colbk
+    button $w.f.ok -fg $colact -bg $colbk -text Quit -width 12 -command "
+                if {$client == 1} {
+			 catch {eval exec rm -f $temp_dir/TkXpI.srv$cmpt}
+                         destroy .
+                         exit
+                } else {destroy $wor}
+             "
+    button $w.f.up -fg $colact -bg $colbk -text Update -width 12 -command "
+             $w.f.up configure -relief sunken -text Updating...
+             update
+             update_telnet $w U
+             update_remotelist $wor $w.c
+             $w.f.up configure -relief raised -text Update
+             "
+    button $w.f.conn -fg $colact -bg $colbk -text Connect -width 12 -command "playgame Remote"
+    button $w.f.sort -fg $colact -bg $colbk -text Sort -width 12 \
+           -command " metaserversort $wor $w "
+    button $w.f.ping -fg $colact -bg $colbk -text Ping -width 12 -command "
+            $w.f.ping configure -relief sunken -text Pinging...
+            update
+            doping $wor
+            $w.f.ping configure -relief raised -text Ping
+            "
+    button $w.f.sta -fg $colact -bg $colbk -text Status -width 12 -command "
+            $w.f.sta configure -relief sunken -text Asking...
+            update
+            servstatus $wor Remote
+            $w.f.sta configure -relief raised -text Status
+            "
+    if { $client == 1 } {
+    	button $w.f.loc -fg $colact -bg $colbk -text Local -width 12 -command "
+                $w.f.loc configure -relief sunken -text Creating...
+       	      	update
+		mklocalserver $w.locab
+		$w.locab.local.f.up configure -relief sunken -text Updating...
+		update
+                update_local $w.locab.local 
+                update_localist $w.locab $w.locab.c
+                $w.f.loc configure -relief raised -text Local
+		$w.locab.local.f.up configure -relief raised -text Update
+       	      	"
+    	pack $w.f.conn $w.f.ping $w.f.sta $w.f.loc $w.f.up $w.f.sort $w.f.ok -side left -fill x -expand yes
+	} else {
+    	pack $w.f.conn $w.f.ping $w.f.sta $w.f.up $w.f.sort $w.f.ok -side left -fill x -expand yes
+    }
+    pack $w.f -side bottom -expand no -fill x
+
+    set cfont [$w.f.conn configure -font]
+    set cfont [string range $cfont [expr 1+[string last " " $cfont]] end]
+
+    frame $w.client -bg $colbk
+    label $w.client.txt -text "Team to join" -fg $colact -bg $colbk
+    scale $w.client.scale -orient horizontal -from -1 -to 9 -command "eq_team" \
+        -bg $colbk -relief flat -width 10  -length 100
+ 
+    label $w.client.txt2 -text "Max Frames/second" -fg $colact -bg $colbk
+    scale $w.client.scale2 -orient horizontal -from -1 -to 20 -command "eq_maxfps" \
+        -bg $colbk -relief flat -length 200 -width 10
+ 
+    label $w.client.label -text "\ \ Nick name" -anchor c -fg $colact -bg $colbk
+    entry $w.client.entry -relief sunken -bd 2 -textvariable nick -fg $colact -bg $colbk
+
+    pack $w.client.txt -side left -expand no 
+    pack $w.client.scale -side left -expand no -fill x
+    pack $w.client.txt2 -side left -expand no -fill x
+    pack $w.client.scale2 -side left -expand no -fill x
+    pack $w.client.label -side left -expand no -fill x
+    pack $w.client.entry -side left -expand yes -fill x
+    pack $w.client -side bottom -expand no -fill x
+    bind $w.client.entry <Return> " "
+    $w.client.scale set $team
+    $w.client.scale2 set $maxframesPerSecond
+
+    frame $w.frame3 -bg $colbk
+    label $w.frame3.l -text "Word(s) to search" -anchor c -fg $colact -bg $colbk
+    pack $w.frame3.l  -side left -expand no
+    entry $w.frame3.e -relief sunken -bd 2 -textvariable qui -fg $colact -bg $colbk
+    pack  $w.frame3.e -side right -expand yes -fill x
+    pack  $w.frame3 -side bottom -expand no -fill x
+    bind $w.frame3.e <Return> "update_remotelist $wor $w.c"
+
+    if { $remoteServer == "No remote server selected" } {
+      $w.f.ping configure -state disabled
+      $w.f.sta configure -state disabled
+      $w.f.conn  configure -state disabled
+    }
+
+    frame $w.frame -bg $colbk
+    pack $w.frame -side top -expand no -fill x
+
+    label $w.frame.sort2 -text " " \
+          -relief sunken -anchor w -font $cfont -fg $colact -bg $colbk
+    pack $w.frame.sort2  -expand no -fill x
+
+    label $w.sort3 -text $remoteServer -relief ridge \
+          -anchor c -fg $colact -bg $colbk
+    pack $w.sort3 -expand no -fill x -side bottom
+    pack $w -side right -expand yes -fill both
+    if {$metsort == "debut" } {update_telnet $w R}
+    set oldmetsort "qwerty"
+    update_remotelist $wor $w.c
+}
+#################################
+proc mklocalserver w {
+  global localServer colbk colact coldes colsc contactPort \
+         team client cfont nick maxframesPerSecond qui
+
+    set localServer "No local server selected"
+    catch {destroy $w}
+    toplevel $w -bg $colbk
+    wm geometry $w +[winfo rootx . ]+[winfo rooty . ]
+    wm title $w "Set of local servers"
+    wm iconname $w "Servers"
+    wm minsize $w 700 135
+   #wm maxsize $w 700 535
+    set wor $w
+    set w $w.local
+    frame $w -bg $colbk
+    frame $w.f -bg $colbk
+    button $w.f.ok -fg $colact -bg $colbk -text Quit -width 12 -command "
+		  destroy $wor
+             "
+    button $w.f.up -fg $colact -bg $colbk -text Update -width 12 -command "
+             $w.f.up configure -relief sunken -text Updating...
+             update
+             update_local $w 
+             update_localist $wor $w.c
+             $w.f.up configure -relief raised -text Update
+             "
+    button $w.f.conn -fg $colact -bg $colbk -text Connect -width 12 -command "
+	    playgame Relocal
+	    "
+    button $w.f.sta -fg $colact -bg $colbk -text Status -width 12 -command "
+            $w.f.sta configure -relief sunken -text Asking...
+            update
+            servstatus $wor Relocal
+            $w.f.sta configure -relief raised -text Status
+            "
+    pack $w.f.conn $w.f.sta $w.f.up $w.f.ok -side left -fill x -expand yes
+    pack $w.f -side bottom -expand no -fill x
+
+    set cfont [$w.f.conn configure -font]
+    set cfont [string range $cfont [expr 1+[string last " " $cfont]] end]
+
+    frame $w.client -bg $colbk
+    frame $w.client.1 -bg $colbk
+    label $w.client.1.txt -text "Team to join" -fg $colact -bg $colbk
+    scale $w.client.1.scale -orient horizontal -from -1 -to 9 -command "eq_team" \
+        -bg $colbk -relief flat -width 10  -length 200
+ 
+    frame $w.client.2 -bg $colbk
+    label $w.client.2.txt2 -text "Max Frames/second" -fg $colact -bg $colbk
+    scale $w.client.2.scale2 -orient horizontal -from -1 -to 20 -command "eq_maxfps" \
+        -bg $colbk -relief flat -length 200 -width 10
+
+    frame $w.client.3 -bg $colbk
+    label $w.client.3.label -text "\ \ Nick name" -anchor c -fg $colact -bg $colbk
+    entry $w.client.3.entry -relief sunken -bd 2 -width 30 \
+          -textvariable nick -fg $colact -bg $colbk
+
+    frame $w.client.4 -bg $colbk
+    label $w.client.4.contactPortlabel -text "Port to use" -fg $colact -bg $colbk
+    entry $w.client.4.contactPortentry -width 6 -relief sunken -bd 2 \
+          -textvariable contactPort -fg $colact -bg $colbk
+
+    pack $w.client.1.txt -side top -expand yes 
+    pack $w.client.1.scale -side top -expand yes 
+    pack $w.client.2.txt2 -side top -expand yes 
+    pack $w.client.2.scale2 -side top -expand yes 
+    pack $w.client.3.label -side top -expand yes 
+    pack $w.client.3.entry -side top -expand yes 
+    pack $w.client.4.contactPortlabel -side top -expand yes 
+    pack $w.client.4.contactPortentry -side top -expand yes 
+    pack $w.client.1 $w.client.2 $w.client.3 $w.client.4 -side left -expand no 
+    pack $w.client -side bottom -expand no 
+    bind $w.client.4.contactPortentry <Return> " "
+    bind $w.client.3.entry <Return> " "
+    $w.client.1.scale set $team
+    $w.client.2.scale2 set $maxframesPerSecond
+
+    if { $localServer == "No local server selected" } {
+      $w.f.sta configure -state disabled
+      $w.f.conn  configure -state disabled
+    }
+
+    frame $w.frame -bg $colbk
+    pack $w.frame -side top -expand no -fill x
+
+    label $w.frame.sort2 -text " " \
+          -relief sunken -anchor w -font $cfont -fg $colact -bg $colbk
+    pack $w.frame.sort2  -expand no -fill x
+
+    label $w.sort3 -text $localServer -relief ridge \
+          -anchor c -fg $colact -bg $colbk
+    pack $w.sort3 -expand no -fill x -side bottom
+    pack $w -side right -expand yes -fill both
+}
+#################################
+proc update_localist { w c } {
+  global msgsl2 coldes colbk colact cfont
+
+  set wor $w
+  set w $w.local
+
+    catch {destroy $w.cc}
+    frame $w.cc -bg $colbk
+    canvas $w.cc.c -yscrollcommand "$w.cc.vscroll set" -yscrollincrement 20 -bg $colbk
+    scrollbar $w.cc.vscroll  -relief sunken -command "$w.cc.c yview" -activebackground $colact -bg $colbk
+    $w.cc.c bind all <Any-Enter> "ChoosenLocal $w.cc.c $wor"
+    $w.cc.c bind all <Button1-ButtonRelease> "set_local $w "
+
+    set j 0
+    set k 0
+    set fd 0
+    set msg2 $msgsl2
+    set tai [llength $msg2]
+     while { $tai > 5 } {
+          set serv [lindex $msg2 0]
+          set vers [format "%s " [lindex $msg2 1]]
+          set stat [format "%s   " [lindex $msg2 2]]
+          set spee [format "%s " [lindex $msg2 3]]
+          set wor  [format "%s " [lindex $msg2 4]]
+          set play [format "%s " [lindex $msg2 5]]
+	  set msg2 [lreplace $msg2 0 0]
+	  set msg2 [lreplace $msg2 0 0]
+	  set msg2 [lreplace $msg2 0 0]
+	  set msg2 [lreplace $msg2 0 0]
+	  set msg2 [lreplace $msg2 0 0]
+	  set msg2 [lreplace $msg2 0 0]
+
+          set cl $colact
+          $w.cc.c create text 10 [expr $j] -text \
+             $vers$stat$spee$wor$play$serv -anchor nw \
+             -tags text -fill $cl -font $cfont
+          incr j  20
+          incr k 1
+    	  set tai [llength $msg2]
+    }
+
+   set fd "     Version    Stat   Speed      Map        Nb Play/Max Play     $k Serveur(s) "
+
+    $w.frame.sort2 configure -text $fd
+
+   $w.cc.c config -scrollregion [$w.cc.c bbox all]
+   pack $w.cc.vscroll -side right  -fill y -expand no
+   pack $w.cc.c -expand yes -fill both
+   pack $w.cc -expand yes -fill both -side bottom
+}
+#################################
+proc update_remotelist { w c } {
+  global metsort metsens msgsl coldes colbk colact qui \
+         s1v s2v s3v s4v s5v cs1v cs2v cs3v cs4v cs5v oldmetsort cfont
+
+  set wor $w
+  set w $w.meta
+  if {$metsort == "debut"} {set oldmetsort "qwerty" }
+  set metsort ""
+  for {set k 1} {$k <= 5} {incr k} {
+    foreach i { s1v s2v s3v s4v s5v } {
+        upvar #0 $i jj
+        if {$jj == $k} {
+           upvar #0 "c$i" kk
+           set metsort "$metsort $kk "
+        }
+    }
+  }
+
+  if { "$metsort$metsens$qui" == "$oldmetsort" } { return }
+  set oldmetsort "$metsort$metsens$qui"
+
+  if {$metsort != "" } {
+        if $metsens {
+          set msgsl [lsort -decreasing -command [list llsort ] $msgsl]
+        } else {
+          set msgsl [lsort -increasing -command [list llsort ] $msgsl]
+        }
+  }
+
+    catch {destroy $w.cc}
+    frame $w.cc -bg $colbk
+    canvas $w.cc.c -yscrollcommand "$w.cc.vscroll set" -yscrollincrement 20 -bg $colbk
+    scrollbar $w.cc.vscroll  -relief sunken -command "$w.cc.c yview" -activebackground $colact -bg $colbk
+    $w.cc.c bind all <Any-Enter> "ChoosenMeta $w.cc.c $wor"
+    $w.cc.c bind all <Button1-ButtonRelease> "set_remote $w "
+
+    if { $qui != "" } {
+        set tr 0
+        foreach q $qui {
+          if { [string length $q] > 2 } { incr tr 1
+          } else { set qui [lreplace $qui $tr $tr] }
+        }
+    }
+
+    set j 0
+    set k 0
+    set fd 0
+    foreach i $msgsl {
+          set serv_title [lindex $i 1]
+          set mp   [format "%-10s " [string range [string trim [lindex $i 4]] 0 9]]
+          set play [format "%2d " [lindex $i 3]]
+          set hbas [format "%2d " [lindex $i 8]]
+          set fps  [format "%2d " [lindex $i 9]]
+          set snd  [format "%3s " [lindex $i 11]]
+          set st   [format "%3s " [lindex $i 7]]
+          set upt   [format "%3s " [lindex $i 12]]
+          set nbteam [format "%3s " [lindex $i 13]]
+          set race [format "%1s " [lindex $i 14]]
+
+          set cl $colact
+          set qn "  "
+          if { $qui != "" } {
+            set tr 0
+            set qn 0
+            foreach q $qui {
+             if { [string length $q] > 2 } {
+                incr tr 1
+                if [string match *[string tolower $q]* [string tolower $i]] {
+                  set cl $coldes
+                  $w.cc.c yview [expr $k-24]
+                  incr fd 1
+                  set qn $tr
+                  break
+                }
+             }
+            }
+            if {$qn > 0} { set qn "$qn "
+            } else { set qn "  " }
+          }
+          $w.cc.c create text 10 [expr $j] -text \
+             $play$fps$nbteam$race$hbas$snd$upt$st$mp$qn$serv_title -anchor nw \
+             -tags text -fill $cl -font $cfont
+          incr j  20
+          incr k 1
+    }
+    if { [string length $qui] > 2 } {
+           set fd "  $fd found"
+           set fd "Pl FPS Tm  Ra Ba Snd Uptime  St   Map      Cr  $k Serveur(s) $fd"
+    } else {
+           set fd "Pl FPS Tm  Ra Ba Snd Uptime  St   Map      Cr  $k Serveur(s)"
+    }
+
+    $w.frame.sort2 configure -text $fd
+
+   $w.cc.c config -scrollregion [$w.cc.c bbox all]
+   pack $w.cc.vscroll -side right  -fill y -expand no
+   pack $w.cc.c -expand yes -fill both
+   pack $w.cc -expand yes -fill both -side bottom
+}
+#################################
+proc llsort {item1 item2} {
+ global metsort
+    foreach fld $metsort {
+        set i1 [lindex $item1 $fld]
+        set i2 [lindex $item2 $fld]
+        if {($fld==3) || ($fld==9)} {
+           if {$i1 <10} { set i1 " $i1" }
+           if {$i2 <10} { set i2 " $i2" }
+        } elseif { $fld==1 } {
+           set i1 [string range $i1 [string last . $i1 ] end]
+           set i2 [string range $i2 [string last . $i2 ] end]
+        }
+        set ret [string compare $i1 $i2]
+        if { $ret != 0 } {
+            return $ret
+        }
+    }
+    return 0
+}
+#################################
+proc update_local { w } {
+  global localServer localPort contactPort colact colbk msgsl2 filter
+
+     set localPort $contactPort
+     set localServer "No local server selected"
+     $w.f.sta configure -state disabled
+     $w.f.conn  configure -state disabled
+     $w.sort3 configure -relief ridge -text $localServer 
+
+     catch {eval exec xpilot -port $contactPort -list } msgsl2
+     if { [string first "Searching" $msgsl2 ] == -1 } {
+	set msgsl2 [split $msgsl2 \n ]
+	set j [expr [llength $msgsl2] - 1 ]
+	set inter [lindex $msgsl2 $j]
+	while  { $j > 2 } {
+		if { ([string first "@" $inter] != -1) || \
+		     ([string first "PLAYER:" $inter] != -1) || \
+		     ([string first "---" $inter] != -1) || \
+		     ([string first "AUTHOR" $inter] != -1) || \
+		     ([string first "LISTING" $inter] != -1) || \
+		     ([string first "arning" $inter] != -1) || \
+		     ($inter == "") } {
+			set msgsl2 [lreplace $msgsl2 $j $j]
+		}
+		incr j -1
+		set inter [lindex $msgsl2 $j]
+	}
+	foreach i { 2 1 0 } {
+		set msgsl2 [lreplace $msgsl2 $i $i]
+	}
+	set i 0
+	foreach j $msgsl2 {
+		if { [string first "PLAYERS" $j] == -1 } {
+			set toto [split $j ":"]
+			set toto2 [lindex $toto 1]
+		} else {
+			set toto [split $j "("]
+			set toto [lindex $toto 1]
+			set toto [split $toto ")"]
+			set toto2 [lindex $toto 0]
+		}
+		set msgsl2 [lreplace $msgsl2 $i $i "$toto2"]
+		incr i 1
+	}
+     } else { set msgsl2 "" }
+    catch {unset inter toto toto2 i j} 
+}
+##################################
+proc update_telnet { w ru } {
+  global colact colbk telnet_arg temp_dir msgsl filter oldmetsort cmpt
+
+  if {$ru == "U"} {
+     catch {eval exec telnet $telnet_arg 2> /dev/null | sed -e "s/\"//g" } msgsl
+     if { ([string first ":yes:" $msgsl ] != -1) || \
+          ([string first ":no:" $msgsl ] != -1) } { 
+        set f [open $temp_dir/TkXpI.srv$cmpt w]
+        puts $f $msgsl
+        close $f
+        catch {eval exec chmod 666 $temp_dir/TkXpI.srv$cmpt}
+     } else {
+        set w $w.err
+        catch {destroy $w}
+        toplevel $w -bg $colbk
+        wm geometry $w +300+500
+        wm title $w "Connection Error"
+        wm iconname $w "Connection Error"
+
+        set msg "telnet $telnet_arg \n $msgsl"
+        frame $w.msg -bg $colbk
+        message $w.msg.text -text $msg -width 600 -bd 10 -fg $colact -bg $colbk
+        pack $w.msg.text -side top -fill both
+        button $w.ok -fg $colact -bg $colbk -text OK -command "destroy $w "
+        pack $w.msg -side top -fill both -expand yes
+        pack $w.ok -side bottom -fill both -expand yes
+        set msgsl ""
+        catch {unset msg}
+    }
+  } else {
+      if {[file exist $temp_dir/TkXpI.srv$cmpt] == 0} { set msgsl ""
+      } else { set msgsl [read [open $temp_dir/TkXpI.srv$cmpt]] }
+  }
+
+  set oldmetsort "qwerty"
+  if {$msgsl != ""} {
+    set msgsl [split $msgsl \n]
+    set k 0
+    foreach i $msgsl {
+       set ir "[split $i ":"]"
+      if {([llength $ir]>14) && ([string compare [lindex $ir 0] $filter] != -1)} {
+        set upt   [format "%d" [lindex $ir 12]]
+        set d [expr $upt / 86400]
+        set s [expr $upt % 86400]
+        set h [expr $s / 3600]
+        set s [expr $s % 3600]
+        set m [expr $s / 60]
+        set s [expr $s % 60]
+        if { $d>0 } {
+           set upt [format "%2d\d:%2d\h" $d $h]
+        } elseif { $h > 0 } {
+           set upt [format "%2d\h:%2d\m" $h $m]
+        } elseif { $m > 0 } {
+           set upt [format "%2d\m:%2d\s" $m $s]
+        } elseif { $s > 0 } {
+           set upt [format "%2d\m:%2d\s" $m $s]
+        } else { set upt "   ?   "}
+        set ir [lreplace $ir 12 12 "$upt"]
+
+        set race [lindex $ir 14]
+        if { $race == -1 } { set race " ? "
+        } elseif { $race==0 } {  set race " no"
+          } else { set race "yes" }
+        set ir [lreplace $ir 14 14 "$race"]
+
+        set nbteam [lindex $ir 13]
+        if { $nbteam == -1 } {
+           set ir [lreplace $ir 13 13 " ? "]
+        } elseif { $nbteam==0 } {
+           set ir [lreplace $ir 13 13 " no"]
+        }
+        set msgsl [lreplace $msgsl $k $k $ir]
+        incr k 1
+      } else { set msgsl [lreplace $msgsl $k $k] }
+    }
+    catch {unset d s h m upt ir nbteam}
+  }
+}
+##################################
+proc set_local w {
+ global localPort localServer2 localServer
+  set localServer $localServer2
+  $w.sort3 configure -text $localServer
+  $w.f.sta configure -state normal
+  $w.f.conn  configure -state normal
+}
+##################################
+proc set_remote w {
+ global remoteServer2 remotePort2 remotePort remoteServer
+  set remoteServer $remoteServer2
+  set remotePort  $remotePort2
+  $w.sort3 configure -text $remoteServer
+  $w.f.ping configure -state normal
+  $w.f.sta configure -state normal
+  $w.f.conn  configure -state normal
+}
+##################################
+proc servstatus { w Type } {
+  global contactPort colact colbk remotePort localPort  remoteServer \
+	 localServer client temp_dir cmpt
+
+  catch {destroy $w.s}
+
+  set deb "S\nQ\n"
+  if { ($Type == "Remote") && ($remotePort > 0) } {
+    catch { [ exec echo $deb | xpilot  -port $remotePort $remoteServer] } msg
+  } else {
+	if { ($Type == "Relocal" ) && ( $localPort > 0) } {
+    		catch { [ exec echo $deb | xpilot  -port $localPort $localServer] } msg
+        } else {
+		if { $Type == "Remote" } {
+    			catch { [ exec echo $deb | xpilot $remoteServer ]} msg
+		} else {
+    			catch { [ exec echo $deb | xpilot $localServer ]} msg
+		}
+  	}
+  }
+  set deb [string first "ERSION...: " $msg]
+  set fin [expr [string last  "Enter command>" $msg]-1]
+  if { ($deb>0) && ($fin>0)} {
+      set msg "SERVER V[string range $msg $deb $fin]"
+  } else {
+      set msg "Server not found !\n$msg"
+  }
+
+  toplevel $w.s -bg $colbk
+  if { $client == 1 } {
+       if [catch {eval {scan [wm geometry .metab.meta.info ] \
+          "%*d %*c %d %*c %d %*c %d" y1 x2 y2}} ] {
+          eval {scan [wm geometry . ] "%d %*c %*d %*c %d %*c %d" x1 x2 y2 }
+          wm geometry $w.s +[expr 20+$x1+$x2]+$y2
+       } else { wm geometry $w.s +$x2+[expr 40+$y1+$y2] }
+  } else {
+       if [catch {eval {scan [wm geometry $w.info ] \
+          "%*d %*c %d %*c %d %*c %d" y1 x2 y2}} ] {
+       eval {scan [wm geometry $w ] "%d %*c %*d %*c %d %*c %d" x1 x2 y2 }
+       wm geometry $w.s +[expr 20+$x1+$x2]+$y2
+       } else { wm geometry $w.s +$x2+[expr 40+$y1+$y2] }
+  }
+  wm title $w.s "Remote Status"
+  wm iconname $w.s "Status"
+  message $w.s.msg -text $msg -width 800 -fg $colact -bg $colbk
+  button $w.s.ok -text OK -command "destroy $w.s" -fg $colact -bg $colbk
+  pack $w.s.msg $w.s.ok -side top -fill both -expand yes
+  catch {unset msg f deb fin}
+}
+##################################
+proc doping w {
+  global remoteServer client colbk colact
+
+  catch {destroy $w.p}
+  catch {eval exec ping PINGOPTIONS} msg
+  set msg "Ping on $remoteServer\n\n$msg"
+
+  toplevel $w.p -bg $colbk
+  if { $client == 1 } {
+       if [catch {eval {scan [wm geometry .metab.meta.info ] \
+          "%*d %*c %d %*c %d %*c %d" y1 x2 y2}} ] {
+          eval {scan [wm geometry . ] "%d %*c %*d %*c %d %*c %d" x1 x2 y2 }
+          wm geometry $w.p +[expr 20+$x1+$x2]+$y2
+       } else { wm geometry $w.p +$x2+[expr 40+$y1+$y2] }
+  } else {
+       if [catch {eval {scan [wm geometry $w.info ] \
+          "%*d %*c %d %*c %d %*c %d" y1 x2 y2}} ] {
+       eval {scan [wm geometry $w ] "%d %*c %*d %*c %d %*c %d" x1 x2 y2 }
+       wm geometry $w.p +[expr 20+$x1+$x2]+$y2
+       } else { wm geometry $w.p +$x2+[expr 40+$y1+$y2] }
+  }
+  wm title $w.p "Ping test"
+  wm iconname $w.p "Ping test"
+  message $w.p.msg -text $msg -width 800 -fg $colact -bg $colbk
+  button $w.p.ok -text OK -command "destroy $w.p" -fg $colact -bg $colbk
+  pack $w.p.msg $w.p.ok -side top -fill both -expand yes
+  catch {unset msg}
+}
+##################################
+proc ChoosenLocal {c w} {
+  global contactPort localServer2 msgsl2 colbk coldes client colact
+
+    set id [$c find withtag current]
+    $c itemconfig text -fill $colact
+    $c itemconfig current -fill $coldes
+    set c2 [expr $id-1]
+    set c2 [expr $c2 * 6]
+    set localServer2 [lindex $msgsl2 $c2]
+}
+##################################
+proc ChoosenMeta {c w} {
+  global remoteServer2 remotePort2 msgsl colbk coldes client colact
+
+    set id [$c find withtag current]
+    $c itemconfig text -fill $colact
+    $c itemconfig current -fill $coldes
+
+  set wor $w
+  set w $w.meta.info
+  if {[winfo exists $w] == 0} {
+     if { $client == 1 } {
+         eval {scan [wm geometry .] "%d %*c %*d %*c %d %*c %d" x1 x2 y2 }
+     } else {
+        eval {scan [wm geometry $wor ] "%d %*c %*d %*c %d %*c %d" x1 x2 y2 }
+     }
+     toplevel $w -bg $colbk
+     #wm maxsize . 840 540
+     wm geometry $w +[expr 20+$x1+$x2]+$y2
+     wm title $w "INFO  SERVER"
+     label $w.text0 -text "" -anchor c -fg $colact -bg $colbk
+     message $w.text1 -text "" -anchor w -width 800 -fg $colact -bg $colbk
+     button $w.ok -text Quit -command "destroy $w" -fg $colact -bg $colbk
+     pack $w.text0 $w.text1 $w.ok -side top -fill both -expand yes -anchor w
+  }
+  set c2 [lindex $msgsl [expr $id-1]]
+  set remoteServer2 [lindex $c2 1]
+  $w.text0 configure -text $remoteServer2
+                set mess1 "Version  : [lindex $c2 0]"
+set mess1 [concat "$mess1\nFrames/s : [lindex $c2 9]"]
+set mess1 [concat "$mess1\nMap name : [lindex $c2 4]"]
+set mess1 [concat "$mess1\nMap size : [lindex $c2 5]"]
+set mess1 [concat "$mess1\nAuthor   : [lindex $c2 6]"]
+set mess1 [concat "$mess1\nBases    : [lindex $c2 8]"]
+set remotePort2 [lindex $c2 2]
+set mess1 [concat "$mess1\nPort     : $remotePort2"]
+set mess1 [concat "$mess1\nStatus   : [lindex $c2 7]"]
+set mess1 [concat "$mess1\nUptime   : [lindex $c2 12]"]
+set mess1 [concat "$mess1\nSound    : [lindex $c2 11]"]
+set mess1 [concat "$mess1\nRace mode: [lindex $c2 14]"]
+set nbteam [lindex $c2 13]
+set mess1 [concat "$mess1\nTeam mode: $nbteam"]
+set nb  [lindex $c2 3]
+set mess1 [concat "$mess1\nPlayers  : $nb"]
+
+ set nbp $nb
+ if { $nb > 0 } {
+  set c2 [split [lindex $c2 10] ","]
+  set nb 0
+  foreach c3 $c2 {
+    incr nb 1
+    if { ($nbteam > 0) && ($nbteam < 10) } {
+       set fin [expr 1+[string first \{ $c3]]
+       if { $fin > 1 } {
+          set c3 "T[string range $c3 $fin $fin] [string range $c3 0 [expr $fin-2]]"
+       } else {
+          set c3  [format "%d) %s" $nb $c3]
+       }
+    } else {
+       set c3  [format "%d) %s" $nb $c3]
+    }
+    set mess1 [concat "$mess1\n$c3"]
+  }
+ }
+  $w.text1 configure -text $mess1
+  if {$nb != $nbp} { puts stderr "Warning : $remoteServer2 has $nb players instead of $nbp" }
+}
+##################################
+proc setmaps {{ w .mainpanel.main.whichmap.map }} {
+  global map sub_dir zext maps_dir
+
+    set w $w.mp.2
+    if { [file isdirectory $sub_dir] == 0 } { set sub_dir $maps_dir}
+    set mg " "
+    if { [catch {set mg [exec ls  $sub_dir | sort]}] != 0 } {set mg " "}
+
+    $w.list delete 0 end
+    $w.list insert  0 " To default dir"
+    set rc "/"
+    if { $sub_dir != "/" } {
+       $w.list insert  end ..
+       set rc "./"
+     }
+     $w.list insert  end ./
+
+    #Directores first !
+    foreach i  $mg  {
+       if [file isdirectory $sub_dir/$i] {
+          $w.list insert end $rc$i
+       }
+    }
+    #Mapfiles
+    set k 0
+    foreach i  $mg  {
+       catch {set fi [file tail $i] }
+       if { ([file isdirectory $i] == 0) && (([string match *.map $fi])|| \
+            ([string match *.map$zext $fi]))} {
+          incr k 1
+          set map_name $fi
+          if {[string match *.map$zext $fi]} {
+            set fi "[string range $fi 0 \
+                   [expr [string length $fi]-5-[string length $zext]]]*"
+          } else { set fi [string range $fi 0 [expr [string length $fi]-5]] }
+          $w.list insert end $fi
+       }
+    }
+
+    $w.msgt configure -text "$k Map(s)"
+    bind $w.list <Button1-ButtonRelease> {catch {maps_update [selection get]}}
+    catch {unset w mg rc k fi k map_name}
+}
+##################################
+proc mkmaps w {
+  global chkopt colSe colact colbk
+
+   set chkopt 1
+   frame $w.mp -bg $colbk
+   frame $w.mp.1 -bg $colbk
+   checkbutton $w.mp.1.but -text "Check options" -variable chkopt \
+     -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
+   radiobutton $w.mp.1.rad -relief flat -selectcolor $colSe -fg $colact -bg $colbk
+   pack  $w.mp.1.but $w.mp.1.rad -side left -expand yes -fill both
+   pack  $w.mp.1 -side bottom -expand yes -fill both
+   $w.mp.1.rad configure -state disabled
+   $w.mp.1.rad deselect
+
+    frame $w.mp.2 -bg $colbk
+    scrollbar $w.mp.2.scroll  -relief sunken -command "$w.mp.2.list yview" \
+              -activebackground $colact -bg $colbk
+    listbox $w.mp.2.list -yscrollcommand "$w.mp.2.scroll set" \
+            -relief sunken -width 17 -height 21 -fg $colact -bg $colbk \
+            -selectmode single
+    label $w.mp.2.msgt -text " Maps" -relief ridge -fg $colact -bg $colbk
+    pack  $w.mp.2.msgt -side top -expand yes -fill both
+
+    pack $w.mp.2.list $w.mp.2.scroll -side left -anchor n -expand no -fill both
+    pack $w.mp.2 -side left
+    pack $w.mp -side left
+}
+##################################
+proc mkship w  {
+ global lib_dir home_dir coms coldes colbk colact rev \
+        shp xpi bot noo
+
+  frame $w -bg $colbk
+  frame $w.ship -bg $colbk
+  set c $w.ship.c
+
+  button $w.def -text "Default Ship" -width 12 -fg $colact -bg $colbk \
+          -command "set shipShape \"\" 
+    		    $w.ship2 configure -text \"Default\"
+		   "
+  pack $w.def -side bottom -fill both -expand no
+
+  pack $w.ship -side bottom -fill both -expand yes
+  canvas $c -width 100 -yscrollcommand "$w.ship.vscroll set" \
+         -yscrollincrement 100 -relief sunken -bg $colbk
+  scrollbar $w.ship.vscroll  -relief sunken -command "$c yview" -activebackground $colact -bg $colbk
+  pack $w.ship.vscroll -side right -fill y
+  pack $c -in $w.ship -expand yes -fill both
+
+  .botbuttons.copyb.msg.etat configure -text "Reading... Ship shapes"
+  update
+  if { $shp == 1 } {
+      if [catch {set coms [split [read [open $lib_dir/TkXpI.shp]] "\n"]}] {
+          puts stderr "Error Ship shapes file : I can't read $lib_dir/TkXpI.shp file !"
+          message $w.ship1 -width 100 -relief ridge -text "0 Shape" -fg $colact -bg $colbk
+          pack $w.ship1 -side top -fill x
+          return
+      }
+  } elseif { $xpi == 1 } {
+      if [catch {set coms [split [read [open $home_dir/.xpilotrc]] "\n"]}] {
+          puts stderr "Error Ship shapes file : I can't read $home_dir/.xpilotrc file !"
+          message $w.ship1 -width 100 -relief ridge -text "0 Shape" -fg $colact -bg $colbk
+          pack $w.ship1 -side top -fill x
+          return
+      }
+  } elseif { $bot == 1 } {
+      if [catch {set coms1 [read [open $home_dir/.xpilotrc]] }] {
+          puts stderr "Error Ship shapes file : I can't read $home_dir/.xpilotrc file !"
+	  set coms1 "erreur"
+      }
+      if [catch {set coms2 [read [open $lib_dir/TkXpI.shp]] }] {
+          puts stderr "Error Ship shapes file : I can't read $lib_dir/TkXpI.shp file !"
+          set coms2 "erreur"
+      }
+      if { ($coms1 == "erreur") && ($coms2 == "erreur") } {
+          message $w.ship1 -width 100 -relief ridge -text "0 Shape" -fg $colact -bg $colbk
+          pack $w.ship1 -side top -fill x
+          return
+      } elseif { $coms1 == "erreur" } {
+	  set coms $coms2
+      } elseif { $coms2 == "erreur" } {
+	  set coms $coms1
+      } else { 
+          set coms $coms1
+          append coms $coms2
+      }
+      set coms [split $coms "\n"]
+  } else {
+          message $w.ship1 -width 100 -relief ridge -text "0 Shape" -fg $colact -bg $colbk
+          pack $w.ship1 -side top -fill x
+          return
+  }
+
+#colY = foreground color of the triangle noise shapes drawing
+#colBl= foreground color of the oval thrust shapes drawing
+#colG = foreground color of the polygonal shapes drawing
+#colR = foreground color of the other oval thrust shapes drawing
+
+   if {[winfo screendepth .] > 2} {# For color displays
+      set colY "yellow"; set colBl "blue"
+      set colG "green" ; set colR  "red"
+   } else {# If monchrome screen !
+      if $rev {
+         set colY "white" ; set colBl "white"
+         set colG "white" ; set colR  "white"
+      } else {
+         set colY "black" ; set colBl "black"
+         set colG "black" ; set colR  "black"
+      }
+   }
+
+  set comto 0
+  foreach shape $coms {incr comto 1}
+
+  set nbe -1
+  set comt 0
+  foreach shape $coms {
+  incr comt 1
+  .botbuttons.copyb.msg.etat configure -text "Making... Ship shapes (Part 1: $comt/$comto)"
+  update
+  if { [string range $shape 0 10]!= "xpilot.ship" } {
+      set coms [lreplace $coms [expr $nbe+1] [expr $nbe+1]]
+  } else {
+      if [string match *e:* $shape ] {
+          incr nbe 1
+          set yt $nbe
+	  if { $yt > -1 } {
+              set nom [lindex $coms $yt]
+              set x [expr [string length $nom]-1]
+              if { [string range $nom $x $x ]!= ")"} {
+                  set x [string last ")" $nom] 
+	      }
+                  set nom [string range $nom 18 $x]
+                  set coms [lreplace $coms $yt $yt $nom]
+          }
+       }
+   }
+  }
+
+  set comto 0
+  foreach shape $coms {incr comto 1}
+
+  set error_ship 0
+  set yt 0
+  set nbe 0
+  set comt 0
+  foreach shape $coms {
+    set nom "?"
+    incr comt 1
+    .botbuttons.copyb.msg.etat configure -text "Making... Ship shapes (Part 2: $comt/$comto)"
+    update
+    set gsh ""
+    incr nbe 1
+    set low 0    ; set hi 0  ; set left 0 ; set right 0 ; set count 0
+    set change 0 ; set max 0 ; set j 0    ; set ymax 0  ; set coo {}
+    set vl $shape
+        
+    set vl [split $vl  ")" ]
+    foreach q $vl {
+        set quoi [lindex $q 0]
+	if { [string match *NAME:* $quoi]  || [string match *NM:* $quoi] } {
+            set nm [split $q :] 
+	    set nom [lindex $nm 1]
+	} elseif { [string match *AUTHOR:* $quoi]  || [string match *AU:* $quoi] } {
+	} elseif { $quoi == {} } {
+	} else {
+         set q [lreplace $q  0 0]
+         foreach i $q {
+          if { ($i != {}) && ($i != { }) } {
+              eval {scan $i "%d %*c %d" yo xo}
+              set yo [expr $yt+40-2*$yo]
+              set xo [expr 50-2*$xo]
+
+              if { ([string match *SHAPE:* $quoi]) || ([string match *SH:* $quoi])} {
+                  incr j 1
+                  if { $yo > $ymax } { set ymax $yo }
+                  lappend  coo $xo $yo
+                  if { $j == 1 } {
+                      set xdo $xo
+                      set ydo $yo
+                  }
+              } elseif { ([string match *LEFTLIGHT:* $quoi]) || ([string match *LL:* $quoi])} {
+                  $c create oval [expr $xo-3] [expr $yo-3]  \
+                  [expr $xo+3] [expr $yo+3] -width 1 -outline $colR -fill {}
+              } elseif { ([string match *RIGHTLIGHT:* $quoi]) || ([string match *RL:* $quoi])} {
+                  $c create oval [expr $xo-3] [expr $yo-3]  \
+                  [expr $xo+3] [expr $yo+3] -width 1 -outline $colBl -fill {}
+              } elseif { ([string match *ENGINE:* $quoi]) || ([string match *EN:* $quoi])} {
+                  $c create oval [expr $xo-3] [expr $yo-3]  \
+                  [expr $xo+3] [expr $yo+3] -width 1 -outline $colY -fill {}
+              } elseif { ([string match *MAINGUN:* $quoi]) || ([string match *MG:* $quoi])} {
+                  $c create polygon [expr $xo] [expr $yo-6]  \
+                  [expr $xo-3] [expr $yo+3] [expr $xo+3] [expr $yo+3] -fill $colY
+              } elseif { ([string match *RIGHTGUN:* $quoi]) || ([string match *RG:* $quoi])} {
+                  $c create polygon [expr $xo] [expr $yo-6]  \
+                  [expr $xo-3] [expr $yo+3] [expr $xo+3] [expr $yo+3] -fill $colBl
+              } elseif { ([string match *LEFTGUN:* $quoi]) || ([string match *LG:* $quoi])} {
+                  $c create polygon [expr $xo] [expr $yo-6]  \
+                  [expr $xo-3] [expr $yo+3] [expr $xo+3] [expr $yo+3] -fill $colR
+              } elseif { ([string match *MISSILERACK:* $quoi]) || ([string match *MR:* $quoi])} {
+                  $c create polygon [expr $xo] [expr $yo-6]  \
+                  [expr $xo-3] [expr $yo+3] [expr $xo+3] [expr $yo+3] -fill $colY
+              } else {
+#colY = foreground color of the triangle noise shapes drawing
+#colBl= foreground color of the oval thrust shapes drawing
+#colG = foreground color of the polygonal shapes drawing
+#colR = foreground color of the other oval thrust shapes drawing
+              puts stderr "Shapes \"$nom\" $vl Unknow $quoi keyword."
+              puts stderr "This shape won't be complete."
+	      set error_ship 1
+	      set gsh "_!!"
+             }
+          }
+         }
+        }
+      }
+     if { $error_ship == 1 } {
+	set error_ship 0 
+     } else {
+        lappend  coo $xdo $ydo
+        eval "$c create line $coo -fill $colG "
+     }
+     $c create text 50 [expr $ymax+15] -text $nom$gsh \
+        -tag itemtxt -fill $colact -justify c -width 100
+     incr yt 100
+  }
+  message $w.ship1 -width 100 -relief ridge -text "$nbe Shapes" -fg $colact -bg $colbk
+  pack $w.ship1 -side top -fill x
+  $c config -scrollregion [$c bbox all]
+
+  message $w.ship2 -width 100 -relief sunken -text "Default" -fg $colact -bg $colbk
+  pack $w.ship2 -side bottom -fill x -expand no
+  pack $w -side left -expand no -fill y
+  $c bind itemtxt <1> "itemEnter $w $c"
+  catch { unset colY colBl colG colR yt nbe shape item nom nbe gsh nbet}
+  catch { unset vl  low hi left right  count change  max ymax coo}
+  catch { unset error_ship coms1 coms2 i j b1 b2 change yo xo xdo ydo }
+}
+##################################
+proc itemEnter { w c } {
+    global coms shipShape coldes colact
+
+    set shipName "?"
+    $c itemconfig itemtxt -fill $colact
+    set id [$c find withtag current]
+    set id2 [$c find withtag itemtxt]
+    set id  [lsearch $id2 $id]
+    set c2 [lindex $coms [expr $id ]]
+    set c3 [split $c2 ")"]
+    foreach q $c3 {
+        set quoi [lindex $q 0]
+	if { [string match *NAME:* $quoi]  || [string match *NM:* $quoi] } {
+            set nm [split $q :] 
+	    set shipName [lindex $nm 1]
+        }
+    }
+    set newshape $c2
+    if {$newshape == $shipShape} {
+       set shipName "Default"
+       set shipShape ""
+       $c itemconfig current -fill $colact
+    } else {
+       set shipShape $newshape
+       $c itemconfig current -fill $coldes
+    }
+    $w.ship2 configure -text $shipName
+    catch { id id2 c2 }
+}
+##################################
+# Update the server
+proc update_server {} {
+  global fireRepeatRate robotsTalk robotsLeave robotLeaveLife \
+        robotLeaveScore  robotLeaveRatio  shotsGravity  idleRun  noQuit \
+        reset  teamAssign  teamImmunity  ecmsReprogramMines  targetSync \
+        treasureKillTeam  treasureCollisionDestroys  treasureCollisionMayKill \
+        playersOnRadar  missilesOnRadar  minesOnRadar  nukesOnRadar \
+        treasuresOnRadar  distinguishMissiles  shieldedItemPickup \
+        shieldedMining  laserIsStunGun  nukeMinSmarts  nukeMinMines \
+        nukeClusterDamage  rogueHeatProb  rogueMineProb \
+        initialFuel  initialTanks  initialECMs  initialMines \
+        initialMissiles  initialCloaks  initialSensors  initialWideangles \
+        initialRearshots  initialAfterburners  initialTransporters \
+        initialLasers  initialEmergencyThrusts  initialTractorBeams \
+        initialAutopilots  initialEmergencyShields \
+        friction  checkpointRadius contactPort \
+        lock shutd messts hostname
+
+    # BOOLEAN VALUES
+    foreach i { robotsTalk robotsLeave shotsGravity \
+        targetSync treasuresOnRadar idleRun noQuit playersOnRadar \
+        missilesOnRadar shieldedItemPickup shieldedMining laserIsStunGun \
+        teamAssign reset teamImmunity  \
+        treasureKillTeam treasureCollisionDestroys ecmsReprogramMines \
+        treasureCollisionMayKill \
+        minesOnRadar nukesOnRadar distinguishMissiles } {
+        upvar #0 $i iv
+        if {$iv == 1} {
+          append updm "O\n$i\nyes\n" 
+	} else {
+          append updm "O\n$i\nno\n" 
+	}
+     }
+
+    #Integer and Real Values
+    foreach i { robotLeaveLife robotLeaveScore robotLeaveRatio \
+	friction checkpointRadius fireRepeatRate \
+        nukeMinSmarts nukeMinMines maxRobots \
+        nukeClusterDamage rogueHeatProb rogueMineProb } {
+        upvar #0 $i iv
+	if {$i == "maxRobots" } {
+          append updm "R\n$iv\n" 
+        } else {
+          append updm "O\n$i\n$iv\n" 
+        }
+    }
+
+    foreach i { initialFuel initialTanks initialECMs initialMines initialEmergencyShields \
+        initialMissiles initialCloaks initialSensors initialWideangles \
+        initialRearshots initialAfterburners initialTransporters initialLasers \
+        initialEmergencyThrusts initialTractorBeams initialAutopilots } {
+        upvar #0 $i iv
+        append updm "O\n$i\n$iv\n" 
+    }
+
+    catch {unset k i fin rep CM }
+     append updm "S\nQ"
+     if {$shutd <= 0} {
+       if { $contactPort > 0 } {
+           catch {[ exec echo $updm | xpilot $hostname -port $contactPort ]} msg
+       } else {
+           catch {[ exec echo $updm | xpilot $hostname ]} msg
+       }
+       puts stdout "Update Server=\"$msg\"\n"
+       set updm ""
+       if [string match *locked* $msg] {
+            if {$lock==0} { set updm "L\nQ"}
+       } elseif $lock { set updm "L\nQ"}
+       if {$messts != ""} { append updm "M\n$messts" }
+     } else {
+       set updm "D\n$shutd\n$messts"
+     }
+
+     if {$updm !=""} {
+         if { $contactPort > 0 } {
+             catch {[ exec echo $updm | xpilot $hostname -port $contactPort ]} msg
+         } else {
+             catch {[ exec echo $updm | xpilot $hostname ]} msg
+         }
+     }
+     catch {unset f updm}
+}
+##################################
+# Read-Write a map file and launch the server
+proc read_write_exec_mapfile {file rwei mp} {
+  global robotsTalk    robotsLeave    shotsGravity idleRun noQuit allowPlayerCrashes \
+    allowPlayerKilling allowShields   playerStartsShielded targetKillTeam \
+    limitedVisibility  limitedLives   teamPlay onePlayerOnly timing edgeWrap \
+    edgeBounce         extraBorder    allowNukes playersOnRadar missilesOnRadar \
+    shieldedItemPickup shieldedMining laserIsStunGun \
+    gravityPointSource  gravityClockwise   gravityLine  gravityAnticlockwise\
+    gravity gravityPoint gravityAngle \
+    shotLife fireRepeatRate   maxRobots  robotLeaveLife robotLeaveScore robotLeaveRatio \
+    maxPlayerShots     worldLives     framesPerSecond \
+    initialFuel        initialTanks   initialECMs \
+    initialMines       initialMissiles  initialCloaks initialSensors \
+    initialWideangles  initialRearshots initialAfterburners \
+    initialLasers      initialTransporters initialEmergencyThrusts initialEmergencyShields \
+    initialTractorBeams initialAutopilots itemEnergyPackProb itemTankProb \
+    itemECMProb        itemMineProb       itemMissileProb itemCloakProb itemSensorProb \
+    itemWideangleProb  itemRearshotProb   itemAfterburnerProb itemTransporterProb \
+    itemLaserProb      itemProbMult       movingItemProb      dropItemOnKillProb \
+    destroyItemInCollisionProb  detonateItemOnKillProb wallBounceDestroyItemProb \
+    itemEmergencyThrustProb      itemTractorBeamProb    itemAutopilotProb \
+    itemEmergencyShieldProb maxItemDensity     gameDuration \
+	friction  raceLaps	checkpointRadius \
+    shipMass shotMass shotSpeed contactPort default_mapfile \
+    map sub_dir zext scoreTableFileName scoreb motdb motd \
+    allowPlayerBounces shotsWallBounce  ballsWallBounce \
+    minesWallBounce    itemsWallBounce  missilesWallBounce \
+    sparksWallBounce   debrisWallBounce reportToMetaServer \
+    teamAssign  reset  teamImmunity     targetTeamCollision \
+    treasureKillTeam   treasureCollisionDestroys itemConcentratorRadius \
+    treasureCollisionMayKill allowClusters allowModifiers allowLaserModifiers \
+    allowShipShapes    minesOnRadar     nukesOnRadar distinguishMissiles \
+    maxObjectWallBounceSpeed            maxShieldedWallBounceSpeed \
+    maxUnshieldedWallBounceSpeed        maxShieldedPlayerWallBounceAngle \
+    maxUnshieldedPlayerWallBounceAngle  playerWallBounceBrakeFactor \
+    objectWallBounceBrakeFactor         objectWallBounceLifeFactor \
+    wallBounceFuelDrainMult             targetSync treasuresOnRadar \
+    nukeClusterDamage mineFuseTime nukeMinSmarts nukeMinMines \
+    ecmsReprogramMines identifyMines maxMissilesPerPack \
+    rogueHeatProb rogueMineProb minVisibilityDistance maxVisibilityDistance \
+    cur_dir maps_dir comrw cmpt hostname
+
+ if {($rwei=="IR")||($rwei=="IW")} {#Init All default values
+  set cur_dir $maps_dir
+  if { $rwei=="IR" } {
+    if [file exist $motd] {
+       set motdb 1
+       catch { .mainpanel.main.check.motdb configure -state normal }
+    } else {
+       set motdb 0
+       catch { .mainpanel.main.check.motdb configure -state disabled }
+    }
+    if { $scoreTableFileName != "" } {
+       set scoreb 1
+       catch { .mainpanel.main.check.scoreb configure -state normal }
+    } else {
+       set scoreb 0
+       catch { .mainpanel.main.check.scoreb configure -state disabled }
+    }
+
+  }
+
+  foreach i { robotsTalk    robotsLeave    shotsGravity idleRun noQuit allowPlayerCrashes \
+    allowPlayerKilling allowShields   playerStartsShielded targetKillTeam \
+    limitedVisibility  limitedLives   teamPlay onePlayerOnly timing edgeWrap \
+    edgeBounce         extraBorder    allowNukes playersOnRadar missilesOnRadar \
+    shieldedItemPickup shieldedMining laserIsStunGun \
+    gravityPointSource  gravityClockwise   gravityLine  gravityAnticlockwise\
+    gravity gravityPoint gravityAngle \
+    shotLife fireRepeatRate   maxRobots  robotLeaveLife robotLeaveScore robotLeaveRatio \
+    maxPlayerShots     worldLives     framesPerSecond \
+    initialFuel        initialTanks   initialECMs \
+    initialMines       initialMissiles  initialCloaks initialSensors \
+    initialWideangles  initialRearshots initialAfterburners \
+    initialLasers      initialTransporters initialEmergencyThrusts initialEmergencyShields \
+    initialTractorBeams initialAutopilots itemEnergyPackProb itemTankProb \
+    itemECMProb        itemMineProb       itemMissileProb itemCloakProb itemSensorProb \
+    itemWideangleProb  itemRearshotProb   itemAfterburnerProb itemTransporterProb \
+    itemEmergencyShieldProb itemLaserProb      itemProbMult \
+    detonateItemOnKillProb      movingItemProb      dropItemOnKillProb \
+    destroyItemInCollisionProb  wallBounceDestroyItemProb \
+    itemEmergencyThrustProb     itemTractorBeamProb   itemAutopilotProb \
+    maxItemDensity     gameDuration     shipMass shotMass shotSpeed contactPort \
+	friction raceLaps checkpointRadius \
+    allowPlayerBounces shotsWallBounce  ballsWallBounce \
+    minesWallBounce    itemsWallBounce  missilesWallBounce \
+    sparksWallBounce   debrisWallBounce reportToMetaServer \
+    teamAssign reset          teamImmunity     targetTeamCollision \
+    treasureKillTeam   treasureCollisionDestroys itemConcentratorRadius \
+    treasureCollisionMayKill allowClusters allowModifiers allowLaserModifiers \
+    allowShipShapes    minesOnRadar     nukesOnRadar distinguishMissiles \
+    maxObjectWallBounceSpeed            maxShieldedWallBounceSpeed \
+    maxUnshieldedWallBounceSpeed        maxShieldedPlayerWallBounceAngle \
+    maxUnshieldedPlayerWallBounceAngle  playerWallBounceBrakeFactor \
+    objectWallBounceBrakeFactor         objectWallBounceLifeFactor \
+    wallBounceFuelDrainMult             targetSync treasuresOnRadar \
+    nukeClusterDamage mineFuseTime nukeMinSmarts nukeMinMines \
+    ecmsReprogramMines identifyMines maxMissilesPerPack \
+    rogueHeatProb rogueMineProb minVisibilityDistance maxVisibilityDistance } {
+       upvar #0 $i iv
+       set k "X$i"
+       set d "D$i"
+       upvar #0 $k kv
+       upvar #0 $d kd
+       if {$rwei=="IR"} { 
+             set iv $kd
+       } else {
+         if [info exist iv] {
+	     if { $mp == 0 } {
+             	  set kv $iv
+             	  set kd $iv
+	     } else {
+             	  set kv $iv
+	     }
+         } else {
+              set kv 0
+	      set kd 0
+              puts stderr "$i Unknown in the xpilots dump"
+         }
+       }
+    }
+}
+
+if {$rwei=="R"} { #Read the map file
+    global mapAuthor mapName mapWidth mapHeight \
+           cur_dir compr sub_dir temp_dir chkopt cmpt
+    set mapAuthor "Anonymous"
+    set mapName "Unknown"
+
+    if { $compr == -3 } {# Pour le defaultfile de xpilots
+         set filer $file
+         set comr [exec grep ":" $filer | grep -v "#" | grep -v "\\\\" ]
+    } elseif { $compr == -2 } {#Pour le Dump de xpilots
+         set comr [exec  xpilots -dump | grep ":" | grep -v "#" | grep -v "\\\\" ]
+    } else {#pour les maps
+       set filer $sub_dir/$file.map
+       if $compr {
+          set filer $temp_dir/TkXpI.mp$cmpt
+          set file $sub_dir/$file.map$zext
+       }
+       set comr [exec grep ":" $filer | grep -v "#" | grep -v "\\\\" ]
+    }
+    set cur_dir $sub_dir
+    set x [catch {set mapAuthor [exec echo $comr | grep -i "mapAuthor" | cut -d: -f2 ]}]
+    if { $x == 0 } { set mapAuthor [string trim $mapAuthor ] }
+    set x [catch {set mapName [exec echo $comr | grep -i "mapName" | cut -d: -f2 ]}]
+    if { $x == 0 } { set mapName [string trim $mapName ] }
+    catch {unset filer x }
+    set comr [exec echo $comr | grep -i -v "mapName" | \
+              grep -i -v "mapAuthor" | grep -i -v "mapData"]
+    set comr [exec echo $comr | sed -e "s/\t//g" | sed -e "s/ //g" ]
+    set comr "debut [split $comr] fin"
+
+    # string VALUES ! Lecture bidon sauf pour gravityPoint
+    foreach i { gravityPoint motd mapFileName \
+                defaultsFileName scoreTableFileName } {
+          set CM " $i:"
+          set fin [string first $CM  $comr]
+          while {$fin > 0} {
+              set deb [expr $fin-1]
+              set fin [expr $fin+[string length $CM]]
+              set fin2  [string first \  [string range $comr [expr $fin+1] end]]
+              set rep [string range $comr $fin [expr $fin+$fin2+1]]
+              set comr "[string range $comr 0 $deb][string range $comr [expr $fin+$fin2+1] end]"
+              if {$i=="gravityPoint"} { set gravityPoint [string trim $rep] }
+              set fin [string first $CM  $comr]
+          }
+    }
+
+    #synonyme string VALUES ! Lecture bidon
+    foreach i { mapFileName=map \
+                defaultsFileName=defaults \
+                scoreTableFileName=scoretable } {
+          set pos [string first "=" $i]
+          set v1 [string range $i 0 [expr $pos-1]]
+          set v2 [string range $i [expr $pos+1] end]
+          set CM " $v2:"
+          set fin [string first $CM  $comr]
+          while {$fin > 0} {
+              set deb [expr $fin-1]
+              set fin [expr $fin+[string length $CM]]
+              set fin2  [string first \  [string range $comr [expr $fin+1] end]]
+              set rep [string range $comr $fin [expr $fin+$fin2+1]]
+              set comr "[string range $comr 0 $deb][string range $comr [expr $fin+$fin2+1] end]"
+              set fin [string first $CM  $comr]
+          }
+    }
+
+    # BOOLEAN VALUES
+    foreach i { robotsTalk robotsLeave shotsGravity noQuit targetKillTeam \
+        limitedVisibility limitedLives onePlayerOnly \
+        idleRun allowPlayerCrashes allowPlayerKilling allowShields \
+        playerStartsShielded teamPlay timing allowNukes playersOnRadar \
+        missilesOnRadar shieldedItemPickup shieldedMining laserIsStunGun \
+        gravityPointSource gravityClockwise gravityAnticlockwise \
+        edgeWrap edgeBounce extraBorder targetSync treasuresOnRadar \
+        allowPlayerBounces shotsWallBounce  ballsWallBounce \
+        minesWallBounce    itemsWallBounce  missilesWallBounce \
+        sparksWallBounce   debrisWallBounce reportToMetaServer \
+        teamAssign reset          teamImmunity     targetTeamCollision \
+        treasureKillTeam   treasureCollisionDestroys ecmsReprogramMines identifyMines \
+        treasureCollisionMayKill allowClusters allowModifiers allowLaserModifiers \
+        allowShipShapes minesOnRadar nukesOnRadar distinguishMissiles } {
+          if { $comr == "debut fin" } { break }
+          set CM " [string tolower $i]:"
+          set fin [string first $CM [string tolower $comr]]
+          while {$fin > 0} {
+              set deb [expr $fin-1]
+              set fin [expr $fin+[string length $CM]]
+              set fin2  [string first \  [string range $comr [expr $fin+1] end]]
+              set rep [string tolower [string range $comr $fin [expr $fin+1]]]
+              set comr "[string range $comr 0 $deb][string range $comr [expr $fin+$fin2+1] end]"
+              upvar #0 $i j
+              if [string match *$rep* "nofa"] {set j 0 } else { set j 1}
+              set fin [string first $CM [string tolower $comr]]
+              if {($CM == " edgewrap:") && ( $j )} {
+                  set edgeBounce 0
+                  set extraBorder 0
+              } elseif {($CM == " edgebounce:") && ( $j )} {
+                  set edgeWrap 0
+                  set extraBorder 0
+                } elseif {($CM == " extraborder:") && ( $j )} {
+                  set edgeBounce 0
+                  set edgeWrap 0
+                }
+          }
+    }
+
+    #synonyme boolean
+    foreach i { idleRun=rawMode allowPlayerCrashes=crash \
+        allowPlayerKilling=killings allowShields=shields \
+        playerStartsShielded=playerStartShielded teamPlay=teams \
+        timing=race allowNukes=nukes playersOnRadar=playersRadar \
+        missilesOnRadar=missilesRadar shieldedItemPickup=shielditem \
+        shieldedMining=shieldmine laserIsStunGun=stungun \
+        reportToMetaServer=reportMeta \
+        targetTeamCollision=targetCollision \
+        treasureCollisionDestroys=treasureCollisionDestroy \
+        treasureCollisionMayKill=treasureUnshieldedCollisionKills
+        allowClusters=clusters allowModifiers=modifiers \
+        allowLaserModifiers=laserallowModifiers \
+        allowShipShapes=ShipShapes minesOnRadar=minesRadar \
+        nukesOnRadar=nukesRadar \
+	treasuresOnRadar=treasuresRadar } {
+          if { $comr == "debut fin" } { break }
+          set pos [string first "=" $i]
+          set v1 [string range $i 0 [expr $pos-1]]
+          set v2 [string range $i [expr $pos+1] end]
+          set CM " [string tolower $v2]:"
+          set fin [string first $CM [string tolower $comr]]
+          while {$fin > 0} {
+             set deb [expr $fin-1]
+             set fin [expr $fin+[string length $CM]]
+             set fin2  [string first \  [string range $comr [expr $fin+1] end]]
+             set rep [string tolower [string range $comr $fin [expr $fin+1]]]
+             set comr "[string range $comr 0 $deb][string range $comr [expr $fin+$fin2+1] end]"
+             upvar #0 $v1 j
+             if [string match *$rep* "nofa"] {set j 0 } else { set j 1}
+             set fin [string first $CM [string tolower $comr]]
+          }
+    }
+
+    # INTEGER and Floating points VALUES
+    foreach i { mapWidth mapHeight shotLife robotLeaveLife robotLeaveScore \
+        robotLeaveRatio fireRepeatRate maxRobots maxPlayerShots worldLives \
+        framesPerSecond itemProbMult gameDuration initialFuel initialTanks \
+	friction raceLaps checkpointRadius \
+        initialECMs initialMines \
+        initialMissiles initialCloaks initialSensors initialWideangles \
+        initialRearshots initialAfterburners initialTransporters initialLasers \
+        itemEnergyPackProb itemTankProb itemECMProb \
+        itemMineProb itemMissileProb itemCloakProb itemSensorProb \
+        itemWideangleProb itemRearshotProb itemAfterburnerProb \
+        itemTransporterProb itemLaserProb itemEmergencyShieldProb \
+        movingItemProb dropItemOnKillProb destroyItemInCollisionProb \
+        detonateItemOnKillProb maxItemDensity gravity gravityAngle shipMass \
+        shotMass shotSpeed maxMissilesPerPack itemConcentratorRadius \
+        nukeMinSmarts nukeMinMines initialEmergencyThrusts \
+        initialTractorBeams initialAutopilots initialEmergencyShields \
+        maxObjectWallBounceSpeed maxShieldedWallBounceSpeed \
+        maxUnshieldedWallBounceSpeed maxShieldedPlayerWallBounceAngle \
+        maxUnshieldedPlayerWallBounceAngle playerWallBounceBrakeFactor \
+        objectWallBounceBrakeFactor objectWallBounceLifeFactor \
+        wallBounceFuelDrainMult wallBounceDestroyItemProb \
+        nukeClusterDamage rogueHeatProb rogueMineProb \
+        mineFuseTime itemEmergencyThrustProb minVisibilityDistance maxVisibilityDistance \
+        itemTractorBeamProb itemAutopilotProb contactPort } {
+          if { $comr == "debut fin" } { break }
+          set CM " [string tolower $i]:"
+          set fin [string first $CM [string tolower $comr]]
+          while {$fin > 0} {
+              set deb [expr $fin-1]
+              set fin [expr $fin+[string length $CM]]
+              set fin2  [string first \  [string range $comr [expr $fin+1] end]]
+              set rep [string range $comr $fin [expr $fin+$fin2+1]]
+              set comr "[string range $comr 0 $deb][string range $comr [expr $fin+$fin2+1] end]"
+              upvar #0 $i j
+              set j [format "%g" $rep]
+              set fin [string first $CM [string tolower $comr]]
+          }
+    }
+
+    #synonyme integer and real
+    foreach i { fireRepeatRate=fireRepeat \
+        maxRobots=robots maxPlayerShots=shots worldLives=lives \
+        framesPerSecond=FPS itemProbMult=itemProbFact gameDuration=time \
+        maxObjectWallBounceSpeed=maxObjectBounceSpeed \
+        maxShieldedWallBounceSpeed=maxShieldedBounceSpeed \
+        maxUnshieldedWallBounceSpeed=maxUnshieldedBounceSpeed
+        maxShieldedPlayerWallBounceAngle=maxShieldedBounceAngle \
+        maxUnshieldedPlayerWallBounceAngle=maxUnshieldedBounceAngle \
+        playerWallBounceBrakeFactor=playerWallBrake \
+        objectWallBounceBrakeFactor=objectWallBrake \
+        wallBounceDrain=wallBounceFuelDrainMult \
+        minVisibilityDistance=minVisibility \
+        maxVisibilityDistance=maxVisibility \
+	itemConcentratorRadius=itemConcentratorRange \
+	checkpointRadius=checkpointradius \
+        contactPort=port } {
+          if { $comr == "debut fin" } { break }
+          set pos [string first "=" $i]
+          set v1 [string range $i 0 [expr $pos-1]]
+          set v2 [string range $i [expr $pos+1] end]
+          set CM " [string tolower $v2]:"
+          set fin [string first $CM [string tolower $comr]]
+          while {$fin > 0} {
+              set deb [expr $fin-1]
+              set fin [expr $fin+[string length $CM]]
+              set fin2  [string first \  [string range $comr [expr $fin+1] end]]
+              set rep [string range $comr $fin [expr $fin+$fin2+1]]
+              set comr "[string range $comr 0 $deb][string range $comr [expr $fin+$fin2+1] end]"
+              upvar #0 $v1 j
+              set j [format "%g" $rep]
+              set fin [string first $CM [string tolower $comr]]
+          }
+    }
+    .mainpanel.main.whichmap.map.mp.1.rad deselect
+    set comrw "[string trim [string range $comr 5 [expr [string length $comr]-4]]]"
+
+     catch {unset comr pos v1 v2 CM fin fin2 rep i }
+    if { $comrw != "" } {
+     .mainpanel.main.whichmap.map.mp.1.rad select
+     if $chkopt {
+      global colbk colact
+      set w .mainpanel.warnopt
+      catch {destroy $w}
+      toplevel $w -bg $colbk
+      set wp .mainpanel.main.whichmap.map
+      wm geometry $w +[winfo rootx $wp]+[winfo rooty $wp]
+      wm title $w "Warning"
+      wm iconname $w "Warning"
+      frame $w.msg -bg $colbk
+      message $w.msg.text1 -text " Warning : unknown option(s) in \n$file : " \
+            -fg $colact -bg $colbk -width 900 -anchor c
+      message $w.msg.text -text [join $comrw \n ] -width 900 -fg $colact -bg $colbk
+      message $w.msg.text2 -fg $colact -bg $colbk \
+        -text "Please, edit this map-file and supress these options." -width 900
+      pack $w.msg.text1 $w.msg.text $w.msg.text2 -side top -fill both
+      button $w.ok -text OK -command "destroy $w" -fg $colact -bg $colbk
+      pack $w.msg -side top -fill both -expand yes
+      pack $w.ok -side bottom -fill both -expand yes
+      catch {unset  wp  w }
+     }
+    }
+}
+
+if {($rwei=="W")||($rwei=="E")||($rwei=="U")} {
+  global mapWidth mapHeight cur_dir sub_dir temp_dir cmpt \
+         zcomp compr comprw dumpall mapName 
+
+ if { $rwei=="W" } {
+    if $compr { set fil $temp_dir/TkXpI.mp$cmpt
+    } else { set fil $cur_dir/$map.map }
+    set nolin  [exec grep -n -i "multiline" $fil]
+    set fin [string first ":" $nolin]
+    set nolin  [exec grep -n -i "multiline" $fil]
+    set fin [string first ":" $nolin]
+    set nolin [string range $nolin 0 [expr $fin-1]]
+    set head1 ""
+    catch {set head1 "[exec head -$nolin $fil | grep "#"]\n"}
+    set head "$head1[exec grep -i mapName $fil ]\n[\
+               exec grep -i mapAuthor $fil ]"
+    set f [open $temp_dir/tkxpimap.tmp$cmpt w]
+
+    puts $f $head
+    puts $f "mapWidth: $mapWidth"
+    puts $f "mapHeight: $mapHeight"
+ } elseif { $rwei=="E" } {
+    if $compr { set fil $cur_dir/$map.map$zext
+    } else { set fil $cur_dir/$map.map }
+
+    set com [concat "xpilots -map " $fil ]
+    set com [concat $com " -mapName \"$mapName (TkXpI-VERSION)\""]
+    if {$contactPort > 0} { set com [concat $com " -contactPort " $contactPort] }
+    if $motdb { set com [concat $com " -motd " $motd] }
+    if $scoreb { set com [concat $com " -scoreTableFileName " $scoreTableFileName] }
+ }
+
+    # Save or Exec the unknown options
+#  if {$rwei!="U" } {
+#    if { $comrw != "" } {
+#      if { $rwei=="W" } {
+#        foreach i $comrw { puts $f $i}
+#      } else {
+#        puts stdout $comrw
+#        foreach i $comrw {
+#          set fin [string first ":" [string tolower $i]]
+#          set rep [string tolower [string range $i [expr $fin+1] end]]
+#          set CM  [string range $i 0 [expr $fin-1]]
+#          if [string match *$rep* "noffalse"] {
+#             set com [concat $com " +$CM"]
+#          } elseif [string match *$rep* "yesontrue"] {
+#                 set com [concat $com " -$CM"]
+#              } else { set com [concat $com " -$CM $rep"] }
+#        }
+#      }
+#    }
+#  }
+
+    # BOOLEAN VALUES
+    foreach i { robotsTalk robotsLeave shotsGravity noQuit targetKillTeam \
+        limitedVisibility limitedLives onePlayerOnly targetSync treasuresOnRadar \
+        idleRun allowPlayerCrashes allowPlayerKilling allowShields \
+        playerStartsShielded teamPlay timing allowNukes playersOnRadar \
+        missilesOnRadar shieldedItemPickup shieldedMining laserIsStunGun \
+        gravityPointSource gravityClockwise gravityAnticlockwise \
+        edgeWrap edgeBounce extraBorder \
+        allowPlayerBounces shotsWallBounce  ballsWallBounce \
+        minesWallBounce    itemsWallBounce  missilesWallBounce \
+        sparksWallBounce   debrisWallBounce reportToMetaServer \
+        teamAssign reset          teamImmunity     targetTeamCollision \
+        treasureKillTeam   treasureCollisionDestroys ecmsReprogramMines identifyMines \
+        treasureCollisionMayKill allowClusters allowModifiers allowLaserModifiers \
+        allowShipShapes minesOnRadar nukesOnRadar distinguishMissiles } {
+        upvar #0 $i iv
+        set d "D$i"
+        set k "X$i"
+        upvar #0 $d kd
+        upvar #0 $k kv
+        if { $rwei=="W" } {
+          if {($iv != $kd) || $dumpall} {
+             if $iv  { puts $f "$i:\tYes"
+             } else { puts $f "$i:\tNo" }
+          }
+        } elseif { $rwei=="E" } {
+           if { $iv != $kv } {
+             if $iv  { set com [concat $com " -$i"]
+             } else { set com [concat $com " +$i"] }
+           }
+        }
+     }
+
+    #Integer and Real Values
+    foreach i { shotLife robotLeaveLife robotLeaveScore robotLeaveRatio \
+        fireRepeatRate maxRobots maxPlayerShots worldLives \
+        framesPerSecond itemProbMult gameDuration \
+	friction raceLaps checkpointRadius \
+        itemEnergyPackProb itemTankProb itemECMProb \
+        itemMineProb itemMissileProb itemCloakProb itemSensorProb \
+        itemWideangleProb itemRearshotProb itemAfterburnerProb \
+        itemTransporterProb itemLaserProb itemEmergencyShieldProb \
+        movingItemProb dropItemOnKillProb destroyItemInCollisionProb \
+        detonateItemOnKillProb maxItemDensity gravity gravityAngle shipMass \
+        shotMass shotSpeed nukeMinSmarts nukeMinMines maxMissilesPerPack \
+        maxObjectWallBounceSpeed maxShieldedWallBounceSpeed \
+        maxUnshieldedWallBounceSpeed maxShieldedPlayerWallBounceAngle \
+        maxUnshieldedPlayerWallBounceAngle playerWallBounceBrakeFactor \
+        objectWallBounceBrakeFactor objectWallBounceLifeFactor \
+        wallBounceFuelDrainMult wallBounceDestroyItemProb \
+        nukeClusterDamage rogueHeatProb rogueMineProb \
+        mineFuseTime itemEmergencyThrustProb itemConcentratorRadius \
+        minVisibilityDistance maxVisibilityDistance \
+        itemTractorBeamProb itemAutopilotProb gravityPoint } {
+        upvar #0 $i iv
+        set d "D$i"
+        set k "X$i"
+        upvar #0 $d kd
+        upvar #0 $k kv
+        if { $rwei=="W" } {
+           if {($iv != $kd) || $dumpall}  {puts $f "$i:\t$iv"}
+        } elseif { $rwei=="E" } {
+           if { $iv != $kv } { set com [concat $com " -$i " $iv] }
+        }
+    }
+
+    foreach i { initialFuel initialTanks initialECMs initialMines initialEmergencyShields \
+        initialMissiles initialCloaks initialSensors initialWideangles \
+        initialRearshots initialAfterburners initialTransporters initialLasers \
+        initialEmergencyThrusts initialTractorBeams initialAutopilots } {
+        upvar #0 $i iv
+        set k "X$i"
+        set d "D$i"
+        upvar #0 $k kv
+        upvar #0 $d kd
+        if { $rwei=="W" } {
+           if {($iv != $kd) || $dumpall}  {puts $f "$i:\t$iv"}
+        } elseif { $rwei=="E" } {
+           if { $iv != $kv } { set com [concat $com " -$i " $iv] }
+        } 
+    }
+
+    catch {unset k i fin rep CM }
+ if { $rwei=="W" } {
+    close $f
+    eval [exec tail +$nolin $fil >> $temp_dir/tkxpimap.tmp$cmpt]
+    eval [exec mv $temp_dir/tkxpimap.tmp$cmpt $sub_dir/$file.map]
+    if $comprw {
+       eval exec $zcomp $sub_dir/$file.map 
+       .mainpanel.main.path.2 configure -text "Current file: $sub_dir/$file.map$zext"
+    } else {
+       .mainpanel.main.path.2 configure -text "Current file: $sub_dir/$file.map"
+    }
+    catch {unset fil nolin f }
+    set cur_dir $sub_dir
+ } elseif { $rwei=="E" } {
+    puts stdout "Background Server=\"$com\""
+    eval exec $com &
+    catch {unset com }
+  }
+}
+}
+##################################
+proc read_xpilotrc {} {
+  global home_dir nick
+
+      if {[winfo exists .botbuttons.copyb] == 0} {
+           showcw .botbuttons.copyb 1 Root
+      }
+      .botbuttons.copyb.msg.etat configure -text "Reading... Nickname"
+       update
+       ferme_tout
+       if [file isfile $home_dir/.xpilotrc] {
+	  set xpi [read [open $home_dir/.xpilotrc]]
+	  set xpi [split $xpi \n]
+	  set xp ""
+	  foreach i $xpi {
+	     if {[string first "xpilot.name" $i] != -1} {
+		set xp $i
+	     }
+	  }
+	  if {$xp != ""} {
+	    set xp [split $xp :]
+	    set xp [lindex $xp 1]
+	    set xp [exec echo $xp | sed -e "s/\t//g" ]
+	    set xp [split $xp]
+	    set bl -1
+	    foreach i $xp {
+		if {($bl == -1) && ($i != "")} { 
+			set bl 0 
+			set nick $i
+		} else {
+			if {$bl == 0} {
+				if {$i == ""} {
+					set nick [concat $nick " "]
+				} else {
+					set nick [concat $nick $i]
+				}
+			}
+		}
+	    }
+          }
+       }
+}
+##################################
+proc read_default {} {
+  global compr defaults_file default_mapfile
+
+      if {[winfo exists .botbuttons.copyb] == 0} {
+           showcw .botbuttons.copyb 1 Root
+      }
+      .botbuttons.copyb.msg.etat configure -text "Reading... Xpilots dump"
+       update
+       ferme_tout
+       set compr -2
+       read_write_exec_mapfile DUMP "R" 0
+       set compr -3
+       .botbuttons.copyb.msg.etat configure -text "Reading... Xpilots default file"
+       update
+       if [file isfile $defaults_file] {
+           read_write_exec_mapfile $defaults_file "R" 0
+       }
+       read_write_exec_mapfile "NULL" "IW" 0
+
+       set w .mainpanel.main.whichmap.map.mp.2.list
+       set item $default_mapfile
+       for {set i 0; set index {} ; set size [$w size] } { $i < $size } { incr i} {
+         if { [$w get $i] == $item } {
+           set index $i
+           break
+         }
+       }
+       if {$index != {} } {
+             $w selection set $index $index
+             $w yview [expr $index-12]
+       } else {
+           set item "$item*"
+           for {set i 0; set index {} ; set size [$w size] } { $i < $size } { incr i} {
+              if { [$w get $i] == $item } {
+               set index $i
+               break
+              }
+           }
+           if {$index != {} } {
+             $w selection set $index $index
+             $w yview [expr $index-12]
+           }
+       }
+       catch {unset index i size item w}
+}
+##################################
+proc ferme_tout {} {
+  catch { destroy .botbuttons.saveb}
+  catch { destroy .botbuttons.itemsb}
+  catch { destroy .botbuttons.metab}
+  catch { destroy .mainpanel.warnopt}
+  catch { destroy .topbuttons.robotb }
+  catch { destroy .topbuttons.teamb } 
+  catch { destroy .topbuttons.raceb } 
+  catch { destroy .topbuttons.shieldb }
+  catch { destroy .topbuttons.radarb } 
+  catch { destroy .topbuttons.weaponb }
+  catch { destroy .topbuttons.playerb }
+  catch { destroy .topbuttons.bounceb }
+  catch { destroy .topbuttons.miscb }
+}
+##################################
+proc maps_update {file} {
+  global compr defaults_file temp_dir sub_dir maps_dir map maxRobots zext \
+         zdecomp gravityPointSource gravityLine gravityAnticlockwise \
+         gravityClockwise mapWidth mapHeight colact colbk coldes cmpt
+
+    set bg [string range $file 0 0]
+    if { $bg != "/" } {
+        set bg [string range $file 0 1]
+    }
+
+    if { $bg == "\{ " } {
+       set sub_dir $maps_dir
+       setmaps
+    } elseif { $bg == "/" } {
+       set sub_dir $file
+       setmaps
+    } elseif { $bg == "./" } {
+       set sub_dir [concat $sub_dir/[string range $file 2 end]]
+       setmaps
+    } elseif { $bg == ".." } {
+          set sub_dir [string range $sub_dir 0 [expr [string last / $sub_dir]-1]]
+          if { $sub_dir == "" } { set sub_dir "/" }
+          setmaps
+    } else {
+      if {[winfo exists .botbuttons.copyb] == 0} {
+           showcw .botbuttons.copyb 1 Root
+      }
+       ferme_tout
+       .botbuttons.copyb.msg.etat configure -text "Reading... $file"
+       read_write_exec_mapfile "NULL" "IR" 0
+       set map $file
+       set cur_dir $sub_dir
+       set compr 0
+       set fil $sub_dir/$file.map
+       update
+       if {[string match *\\* $file]} {#Si map compressee
+           set compr 1
+           set file [string range $file 0 [expr [string length $file]-2]]
+           set map $file
+           eval exec $zdecomp < $sub_dir/$file.map$zext > $temp_dir/TkXpI.mp$cmpt
+           eval exec chmod 666 $temp_dir/TkXpI.mp$cmpt
+           set fil $sub_dir/$file.map$zext
+       }
+       if [file exist $fil ] { read_write_exec_mapfile $file "R" 0 
+       		               read_write_exec_mapfile "NULL" "IW" 1 }
+       .botbuttons.copyb.msg.etat configure -text "Updating... bitmap and widgets"
+       update
+       setbitmap
+       .mainpanel.main.whichmap.bitmap.0.gravity.label configure \
+                 -text "Size: $mapWidth\x$mapHeight  Gravity\ " -anchor c -fg $colact -bg $colbk
+       .botbuttons.save configure -state normal
+       .botbuttons.start configure -state normal
+       .botbuttons.items configure -state normal
+       maj_buttons teamPlay
+       maj_buttons timing
+       maj_buttons onePlayerOnly
+       setcheck  .mainpanel.main.check
+       if $gravityPointSource {
+          set gravityLine 0
+          if $gravityAnticlockwise {
+                 set gravityClockwise 0
+                 gravity_check gravityAnticlockwise
+          } else {
+                set gravityAnticlockwise 0
+               	gravity_check gravityClockwise
+          }
+       } else {
+          set gravityLine 1
+          gravity_check gravityLine
+       }
+       destroy .botbuttons.copyb
+    }
+    catch {.mainpanel.main.path.2 configure -text "Current file: $fil" }
+    catch { unset bg fil }
+}
+##################################
+proc setbitmap {{ w .mainpanel.main.whichmap }} {
+  global map sub_dir temp_dir cur_dir compr zext argv colbk coldes colact cmpt
+
+ set c $w.bitmap.c
+ $c delete btmb
+ $c delete btmxp
+ set fil $cur_dir/$map.map
+ if $compr { set fil $temp_dir/TkXpI.mp$cmpt }
+ if [file exist $fil] {
+    set x [catch {eval exec maps2image -l -s 358 -b $fil > $temp_dir/TkXpI.bmp$cmpt}]
+    if { $x != 0 } {
+       set x [catch {eval exec maps2image -s 358 -b $fil > $temp_dir/TkXpI.bmp$cmpt}]
+       if { $x == 0 } {
+          puts stderr "You haven't the latest version of \"maps2image\""
+       }
+    }
+    if { $x == 0 } {
+      $c create bitmap 182 182 -bitmap @$temp_dir/TkXpI.bmp$cmpt \
+         -tag btmb -foreground $coldes
+      setbitgra .mainpanel.main.whichmap.bitmap.c
+    } else {
+        $c delete btmg
+        $c delete btmgo
+       $c create text 182 80 -fill $colact -tag btmb -text "Problem with \"maps2image\""
+       $c create text 182 100 -fill $colact -tag btmb \
+             -text "Click here with the RIGHT button to have some helps"
+    }
+    catch {eval exec rm -f $temp_dir/TkXpI.bmp$cmpt}
+ } else {
+        $c delete btmg
+        $c delete btmgo
+       if { $map != " " } {
+          $c create text 182 80 -text $map -fill $colact -tag btmb
+          $c create text 182 100 -text "Map file not found" -fill $colact -tag btmb
+          .mainpanel.main.path.2 configure -text "Current file: Map file not found"
+       } else {
+           $c create text 182 182 -text "No map selected"
+          .mainpanel.main.path.2 configure -text "Current file: No map selected"
+         }
+ }
+ catch {unset c fil x }
+}
+##################################
+proc mkbitmap w {
+ global  colact colbk  colSe gravityClockwise gravityAnticlockwise  \
+         gravityLine   gravityPoint gravityAngle
+
+    set c $w.bitmap.c
+    frame $w.bitmap -bg $colbk
+    canvas $c -scrollregion { 0 0 364 364 } -width 364 -height 364 \
+           -relief raised -bd 2 -bg $colbk
+    pack $c -in $w.bitmap -side top
+    pack $w.map $w.bitmap -side left -anchor c  -expand yes
+
+    set g $w.bitmap
+
+    frame $g.0 -bg $colbk
+    frame $g.0.gravity -bg $colbk
+    label $g.0.gravity.label -text "Gravity\ \ " -anchor c -fg $colact -bg $colbk
+    label $g.0.gravity.label2 -text "from a:" -anchor c -fg $colact -bg $colbk
+    entry $g.0.gravity.entry -width 7 -relief sunken -bd 2 \
+        -textvariable gravity -fg $colact -bg $colbk
+    pack $g.0.gravity.label $g.0.gravity.entry $g.0.gravity.label2 -side left
+    pack $g.0.gravity 
+    bind $g.0.gravity.entry <Return> "setbitgra .mainpanel.main.whichmap.bitmap.c"
+
+    frame $g.b -bg $colbk
+    checkbutton $g.b.gravityClockwise -text "Clockwise" -variable gravityClockwise \
+     -anchor w -relief flat -command "gravity_check gravityClockwise" \
+     -selectcolor $colSe -fg $colact -bg $colbk
+
+    checkbutton $g.b.gravityAnticlockwise -text "Anticlockwise" \
+        -variable gravityAnticlockwise -selectcolor $colSe -fg $colact -bg $colbk \
+        -anchor w -relief flat -command "gravity_check gravityAnticlockwise"
+
+    frame $g.l -bg $colbk
+    checkbutton $g.l.gravityLine -text "Line" -variable gravityLine -fg $colact -bg $colbk\
+        -anchor w -relief flat -command "gravity_check gravityLine" -selectcolor $colSe
+
+    checkbutton $g.l.gravityPointSource -text "PointSource" -variable gravityPointSource -fg $colact -bg $colbk\
+        -anchor w -relief flat -command "gravity_check gravityPointSource" -selectcolor $colSe
+    pack $g.b.gravityClockwise $g.b.gravityAnticlockwise \
+        -side left -expand yes -fill both
+    pack $g.l.gravityPointSource $g.l.gravityLine \
+        -side left -expand yes -fill both
+
+    frame $g.p -bg $colbk
+    label $g.p.gravityPointlabel -text "Point coordinates (x,y)" -anchor w -fg $colact -bg $colbk
+    entry $g.p.gravityPointentry -width 7 -relief sunken -bd 2 \
+        -textvariable gravityPoint -fg $colact -bg $colbk
+    bind $g.p.gravityPointentry <Return> " setbitgra .mainpanel.main.whichmap.bitmap.c"
+    pack $g.p.gravityPointentry $g.p.gravityPointlabel -side left -expand no -fill both
+
+    frame $g.a -bg $colbk
+    label $g.a.gravityAnglelabel -text "Line Gravity angle (degrees)" -anchor w -fg $colact -bg $colbk
+    entry $g.a.gravityAngleentry -width 7 -relief sunken -bd 2 \
+        -textvariable gravityAngle -fg $colact -bg $colbk
+    bind $g.a.gravityAngleentry <Return> " setbitgra .mainpanel.main.whichmap.bitmap.c"
+    pack $g.a.gravityAngleentry $g.a.gravityAnglelabel -side left -expand no -fill both
+
+    pack $g.0 $g.b $g.l $g.p $g.a -side top -expand yes -fill both
+    bind $c <1> "itemStartDrag $c %x %y"
+    bind $c <B1-Motion> "itemDrag $c %x %y"
+    catch {unset c g}
+}
+##################################
+proc setbitgra c {
+  global mapWidth mapHeight gravity \
+         gravityClockwise gravityAnticlockwise \
+         gravityLine  gravityPoint     gravityAngle \
+         xg yg pi max WidthL HeightL colact
+
+  $c delete btmg
+  $c delete btmgo
+
+  if {$gravity == 0} { return }
+
+  if  $gravityLine {
+     set xg [expr round($mapWidth/2) ]
+     set yg [expr round($mapHeight/2) ]
+  } else {
+     eval {scan $gravityPoint "%d %*c %d" xg yg}
+     if { $xg > $mapWidth } { set xg $mapWidth 
+     } elseif { $xg < 0 } { set xg 0 }
+     if { $yg > $mapHeight} { set yg $mapHeight
+     } elseif { $yg < 0 } { set yg 0 }
+     set gravityPoint "$xg,$yg"
+  }
+
+  set max $mapWidth
+  if { $max < $mapHeight } { set max $mapHeight }
+  if { $max == 0 } { return }
+
+  set WidthL [ expr round(2+360*$mapWidth/$max)]
+  set HeightL [ expr round(2+360*$mapHeight/$max)]
+  set xg [ expr round(2+(360*$xg)/$max)]
+  set yg [ expr round(2+(360*$yg)/$max)]
+
+  if  $gravityLine { 
+     set pi 3.14159265
+     set xd [expr round($xg-100*$gravity*sin(-$pi/2+$gravityAngle*$pi/180.))]
+     set yd [expr round($yg-100*$gravity*cos(-$pi/2+$gravityAngle*$pi/180))]
+     $c create line $xg $yg $xd $yd -fill $colact -width 2 -arrow last -tags btmg
+  } else {
+      $c create text $xg $yg  -text "O" -fill $colact -tag btmg
+      set nm [expr round(10+abs(100*$gravity))]
+      $c create oval [expr $xg-$nm] [expr $yg-$nm] [expr $xg+$nm] [expr $yg+$nm] \
+        -width 2 -outline $colact -fill {} -tag btmgo
+  }
+}
+##################################
+proc itemStartDrag {c x y} {
+    global lastX lastY
+    set lastX [$c canvasx $x]
+    set lastY [$c canvasy $y]
+}
+##################################
+proc itemDrag {c x y} {
+  global lastX lastY xg yg gravity gravityAngle pi max gravityPoint \
+  mapWidth mapHeight WidthL HeightL
+  set x [$c canvasx $x]
+  set y [$c canvasy $y]
+  set type [$c type current]
+  if {$type == "window"} { return }
+
+ if {$type == "line"} {
+     set nm [expr abs($xg-$x)]
+     set ny [expr abs($yg-$y)]
+     if { $ny > $nm } { 
+         if { $ny < 5 } { set y [expr $yg+5] }
+     } elseif { $nm < 5 } { set x [expr $xg+5] }
+
+    if { $x < 2 } { set x 2
+    } elseif { $x > 360 } { set x 360 }
+    if { $y < 2 } { set y 2
+    } elseif { $y > 360 } { set y 360 }
+
+    $c coord current $xg $yg $x $y
+    set nm [expr sqrt(($xg-$x)*($xg-$x)+($yg-$y)*($yg-$y))]
+    if {$yg <  $y} {set nm [expr -$nm]}
+    set gravity [format "%3.3f" [expr $nm/100]]
+    set nm [expr 180*acos(($x-$xg)/$nm)/$pi]
+    set gravityAngle [format "%2.0f" $nm]
+    set lastX $x
+    set lastY $y
+ } elseif {$type == "text"} {
+    if { $x > $WidthL } { set x $WidthL
+    } elseif { $x < 2 } { set x 2 }
+
+    if { $y > $HeightL } { set y $HeightL
+    } elseif { $y < 2 } { set y 2 }
+
+    set xg [expr $x]
+    set yg [expr $y]
+    $c move current [expr $x-$lastX] [expr $y-$lastY]
+    $c move btmgo [expr $x-$lastX] [expr $y-$lastY]
+    set nx [expr ($x-2)*$max/360]
+    set ny [expr ($y-2)*$max/360]
+    set gravityPoint [format "%d,%g" $nx $ny]
+    set lastX $x
+    set lastY $y
+   } elseif {$type == "oval"} {
+     set nm [expr abs($xg-$x)]
+     set ny [expr abs($yg-$y)]
+     if { $ny > $nm } { set nm $ny }
+     if { $nm < 10 } { set nm 10 }
+     if { $gravity > 0 } {
+        set gravity [expr ($nm-9)/100.0]
+     } else { set gravity [expr -($nm-9)/100.0] }
+     $c coord current [expr $xg-$nm] [expr $yg-$nm] [expr $xg+$nm] [expr $yg+$nm]
+   }
+}
+##################################
+proc mkpath w {
+ global map sub_dir temp_dir cur_dir compr zext colbk colact
+
+    catch {destroy $w.path.1}
+    catch {destroy $w.path.2}
+    set fil $cur_dir/$map.map
+    if $compr { set fil $fil$zext}
+    if { $map ==  " " } { set fil " No map file selected ! " }
+
+    frame $w.path.1 -bg $colbk
+    label $w.path.1.label -text "Current dir.:" -anchor w -fg $colact -bg $colbk
+
+    entry $w.path.1.entry -relief sunken -bd 2 -textvariable sub_dir -fg $colact -bg $colbk
+    pack $w.path.1.entry -side right  -expand yes -fill x
+    pack $w.path.1.label -side left -expand no
+    pack $w.path.1 -side bottom -anchor w -expand no -fill x
+    bind $w.path.1.entry <Return> " setmaps "
+
+
+    label $w.path.2 -text "Current file: $fil"  -relief flat -anchor w -fg $colact -bg $colbk
+    pack $w.path.2 -side top -anchor w -expand no
+    pack $w.path -side bottom -anchor w -expand yes -fill both
+    catch {unset fil }
+}
+##################################
+proc setcheck w {
+  global scoreb motdb noQuit teamPlay onePlayerOnly reportToMetaServer \
+    timing framesPerSecond gameDuration maxRobots
+
+    foreach i { scoreb motdb noQuit teamPlay onePlayerOnly \
+                reportToMetaServer timing } {
+        upvar #0 $i j
+        if {$j == 0} { $w.$i deselect
+        } else { $w.$i select }
+    }
+
+    $w.fps.scale set $framesPerSecond
+    $w.gameDuration.scale set $gameDuration
+    $w.maxRobots.scale set $maxRobots
+}
+##################################
+proc mkcheck {w state} {
+  global client colact colbk colSe colsc scoreb motdb noQuit teamPlay onePlayerOnly \
+    team reportToMetaServer timing framesPerSecond gameDuration \
+    maxframesPerSecond contactPort maxRobots
+
+    frame $w -bg $colbk
+    checkbutton $w.noQuit -text "Server keeps running" -variable noQuit \
+        -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
+
+  if {$state != "U"} {
+    checkbutton $w.teamPlay -text "Team play mode" -variable teamPlay -anchor w \
+       -relief flat -command " maj_buttons teamPlay " -selectcolor $colSe -fg $colact -bg $colbk
+  }
+
+  if {$state != "U"} {
+    checkbutton $w.onePlayerOnly -text "One player only" -selectcolor $colSe -variable onePlayerOnly\
+       -anchor w -relief flat -command "maj_buttons onePlayerOnly" -fg $colact -bg $colbk
+  }
+
+  if {$state != "U"} {
+    checkbutton $w.reportToMetaServer -text "Inform Meta-server" -fg $colact -bg $colbk \
+        -variable reportToMetaServer -anchor w -relief flat -selectcolor $colSe
+  }
+
+  if {$state != "U"} {
+    checkbutton $w.motdb -text "Use the server motd" -fg $colact -bg $colbk \
+        -variable motdb -anchor w -relief flat -selectcolor $colSe
+  }
+
+  if {$state != "U"} {
+    checkbutton $w.scoreb -text "Use the score file" -fg $colact -bg $colbk \
+        -variable scoreb -anchor w -relief flat -selectcolor $colSe
+  }
+
+  if {$state != "U"} {
+    checkbutton $w.timing -text "Race mode" -variable timing \
+        -anchor w -relief flat -command " maj_buttons timing " -selectcolor $colSe -fg $colact -bg $colbk
+  }
+
+  if {$state != "U"} {
+    pack $w.reportToMetaServer $w.motdb $w.scoreb $w.noQuit $w.onePlayerOnly \
+         $w.teamPlay $w.timing -side top -fill both -expand yes
+  } else {
+    pack $w.noQuit -side top -fill both -expand yes
+  }
+
+    frame $w.maxRobots -bg $colbk
+    label $w.maxRobots.txt -text "Number of robots" -fg $colact -bg $colbk
+    scale $w.maxRobots.scale -orient horizontal -from 0 -to 10 -command " maj_Robots " \
+       -bg $colsc -relief flat -length 200 -width 10
+  if {$state != "U"} {
+    pack $w.maxRobots.txt $w.maxRobots.scale -side top -anchor c
+  } else {
+    pack $w.maxRobots.txt $w.maxRobots.scale -side top -anchor w
+  }
+
+  if {$state != "U"} {
+    frame $w.gameDuration -bg $colbk
+    label $w.gameDuration.txt -text "Game duration (mn)" -fg $colact -bg $colbk
+    scale $w.gameDuration.scale -orient horizontal -from 0 -to 240 -command "set \
+        gameDuration" -bg $colsc -relief flat -length 200 -width 10
+    pack $w.gameDuration.txt $w.gameDuration.scale -side top -expand yes -anchor c
+  }
+
+  if {$state != "U"} {
+    frame $w.fps -bg $colbk
+    label $w.fps.txt -text "Frames/second" -fg $colact -bg $colbk
+    scale $w.fps.scale -orient horizontal -from 5 -to 25 -command "set framesPerSecond" \
+        -bg $colsc -relief flat -length 200 -width 10
+    pack $w.fps.txt $w.fps.scale -side top -expand yes -anchor c
+  }
+
+  if {$state != "U"} {
+    pack $w.maxRobots $w.gameDuration $w.fps -side top -expand yes -fill both -pady 5
+  } else {
+    pack $w.maxRobots -side top -expand no -fill both -pady 5
+ }
+
+    frame $w.0 -bg $colbk
+    frame $w.0.contactPort -bg $colbk
+    label $w.0.contactPort.label -text "Port to use" -width 15 -anchor w -fg $colact -bg $colbk
+    entry $w.0.contactPort.entry -width 6 -relief sunken -bd 2 \
+          -textvariable contactPort -fg $colact -bg $colbk
+    pack $w.0.contactPort.entry $w.0.contactPort.label -side left
+    bind $w.0.contactPort.entry <Return> " "
+
+    if {$client == 3} {
+  if {$state != "U"} {
+       frame $w.0.team -bg $colbk
+       label $w.0.team.label -text "Team to join"  -fg $colact -bg $colbk
+       scale $w.0.team.scale -orient horizontal -from -1 -to 9 \
+	    -command "eq_team" -bg $colbk -relief flat -width 10 -length 200
+       pack $w.0.team.label $w.0.team.scale -side top -anchor c
+       $w.0.team.scale set $team
+  }
+##++
+  if {$state != "U"} {
+    frame $w.0.maxfps -bg $colbk
+    label $w.0.maxfps.txt -text "Max Frames/second" -fg $colact -bg $colbk
+    scale $w.0.maxfps.scale -orient horizontal -from -1 -to 20 -command "eq_maxfps" \
+        -bg $colbk -relief flat -length 200 -width 10
+    pack $w.0.maxfps.txt $w.0.maxfps.scale -side top -anchor c
+    $w.0.maxfps.scale set $maxframesPerSecond
+  }
+
+  if {$state != "U"} {
+       frame $w.0.name -bg $colbk
+       label $w.0.name.label -text "Nick name" -width 9 -anchor w -fg $colact -bg $colbk
+       entry $w.0.name.entry -width 14 -relief sunken -bd 2 \
+	    -textvariable nick -fg $colact -bg $colbk
+       pack $w.0.name.entry $w.0.name.label -side left
+       bind $w.0.name.entry <Return> " "
+  }
+##++
+      if {$state != "U"} {
+       pack $w.0.team $w.0.maxfps $w.0.contactPort $w.0.name -side top -fill x
+      } else {
+       pack $w.0.contactPort -side top -fill x
+      }
+    } else {
+         pack $w.0.contactPort -side top -fill x
+    }
+    pack $w.0 -side left -fill x
+}
+##################################
+proc save_delete_map { w wp } {
+  global colact colbk colSe map sub_dir newmap mapWidth mapHeight \
+         mapAuthor mapName compr comprw dumpall
+
+    catch {destroy $w}
+    toplevel $w -bg $colbk
+    wm geometry $w +[winfo rootx $wp]+[expr [winfo rooty $wp]-320]
+    wm title $w "Save the map"
+    wm iconname $w "Save the map"
+
+    set comprw $compr
+    frame $w.m -bg $colbk
+    label $w.m.text1 -text " World : $mapName" -anchor w  -fg $colact -bg $colbk
+    label $w.m.text2 -text " Author : $mapAuthor" -anchor w -fg $colact -bg $colbk
+    label $w.m.text3 -text " Size : $mapWidth x $mapHeight" -anchor w -fg $colact -bg $colbk
+
+    checkbutton $w.m.dumpall -text "Save all options" -variable dumpall \
+       -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
+
+    checkbutton $w.m.comprw -text "Compressed map file" -variable comprw \
+       -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
+
+    pack $w.m.text1 $w.m.text2 $w.m.text3 $w.m.comprw $w.m.dumpall \
+         -side top -fill both -pady 10 -padx 10
+
+    set newmap $map
+    label $w.label -text "File Name : " -anchor c -fg $colact -bg $colbk
+    entry $w.entry -relief sunken -bd 2 -textvariable newmap -fg $colact -bg $colbk
+    pack $w.m $w.label $w.entry -side top -expand yes -fill both -pady 5 -padx 10
+    bind $w.entry <Return> " "
+
+    button $w.quit -text Cancel -command "destroy $w" -fg $colact -bg $colbk
+    button $w.ok  -text  Save  -command " existingSave $wp ; destroy $w" -fg $colact -bg $colbk
+    button $w.del -text Delete -command " existingDel  $wp ; destroy $w" -fg $colact -bg $colbk
+    pack $w.del $w.ok $w.quit -side left -fill both -expand yes
+
+}
+##################################
+proc existingSave { wp {w .botbuttons.warn}} {
+  global map sub_dir newmap default_mapfile compr zext \
+         temp_dir comprw cur_dir colbk colact cmpt
+    catch {destroy $w}
+
+    set ex [file exist $sub_dir/$newmap.map$zext]
+    if $ex {
+       set st "compressed"
+    } else {
+       set ex [file exist $sub_dir/$newmap.map]
+       if $ex { set st "uncompressed" }
+    }
+
+    if { $ex!=1 } {
+        read_write_exec_mapfile $newmap "W" 0
+        set fil $sub_dir/$newmap.map
+        set map $newmap
+        set compr $comprw
+        setmaps
+    } else {
+      toplevel $w -bg $colbk
+      wm geometry $w +[winfo rootx $wp]+[expr [winfo rooty $wp]-160]
+      wm title $w "Warning"
+      wm iconname $w "Warning"
+      frame $w.msg -bg $colbk
+      label $w.msg.text1 -text "The $st file \"$newmap\" already existes," -fg $colact -bg $colbk
+      label $w.msg.text2 -text "Do you want to continue ?" -fg $colact -bg $colbk
+      pack $w.msg.text1 $w.msg.text2 -padx 10 -pady 10 \
+            -side top -fill both -expand yes -anchor center
+
+      button $w.ok -fg $colact -bg $colbk -text OK -command "
+         destroy $w
+         catch {eval exec rm -f $sub_dir/$newmap.map$zext }
+         read_write_exec_mapfile $newmap \"W\" 0
+         set fil $sub_dir/$newmap.map
+         if $comprw { catch {eval exec mv $temp_dir/$map.map$cmpt $temp_dir/$newmap.map$cmpt }}
+         set map $newmap
+         set compr $comprw
+         setmaps
+        "
+
+        button $w.cancel -fg $colact -bg $colbk -text Cancel -command "destroy $w"
+        pack $w.msg -side top -expand yes -anchor center
+        pack $w.ok $w.cancel -side left -fill both -expand yes
+    }
+ catch {unset ex st fil}
+}
+##################################
+proc existingDel { wp {w .botbuttons.warn}} {
+  global map sub_dir newmap default_mapfile compr zext \
+         temp_dir comprw cur_dir colbk colact
+    catch {destroy $w}
+
+    set meme 0
+    if {"$cur_dir/$map" == "$sub_dir/$newmap"} { set meme 1}
+
+    if $comprw {
+          set st "compressed"
+          set ex [file exist $sub_dir/$newmap.map$zext]
+    } else {
+           set st "uncompressed"
+           set ex [file exist $sub_dir/$newmap.map]
+    }
+
+    toplevel $w -bg $colbk
+    wm geometry $w +[winfo rootx $wp]+[expr [winfo rooty $wp]-160]
+    wm title $w "Warning"
+    wm iconname $w "Warning"
+    frame $w.msg -bg $colbk
+
+     if $ex {
+          label $w.msg.text1 -text "Delete the $st file : $newmap " -fg $colact -bg $colbk
+          label $w.msg.text2 -text "Do you want to continue ?" -fg $colact -bg $colbk
+          pack $w.msg.text1 $w.msg.text2 -padx 10 -pady 10 \
+               -side top -fill both -expand yes -anchor center
+
+     } else {
+          label $w.msg.text1 -text " The $st file \"$newmap\" doesn't exist ! " -fg $colact -bg $colbk
+          pack $w.msg.text1 -padx 10 -pady 10 \
+                    -side top -fill both -expand yes -anchor center
+          button $w.ok -text OK -command " destroy $w " -fg $colact -bg $colbk
+          pack $w.msg $w.ok -side top -fill both -expand yes
+          return
+     }
+
+    button $w.ok -text OK -fg $colact -bg $colbk -command "
+       destroy $w
+       if $comprw {
+            eval exec rm -f $sub_dir/$newmap.map$zext
+       } else { eval exec rm -f $sub_dir/$newmap.map }
+       if $meme {
+            .botbuttons.save  configure -state disabled
+            .botbuttons.start configure -state disabled
+            .botbuttons.items configure -state disabled
+            set map \" \"
+            .mainpanel.main.path.2 configure -text \"Current file: No map selected\"
+            setbitmap
+       }
+       setmaps
+      "
+    button $w.cancel -text Cancel -fg $colact -bg $colbk -command "destroy $w"
+    pack $w.msg -side top -expand yes -anchor center
+    pack $w.ok $w.cancel -side left -fill both -expand yes
+    catch {unset meme ex st }
+}
+##################################
+proc playgame { Type } {
+  global team shipShape contactPort remotePort localPort remoteServer \
+	 localServer cliopt nick hostname maxframesPerSecond
+    set com "xpilot -join $cliopt "
+    if {$team > -1} {
+    	set com [concat $com "-team " $team]
+    }
+    if {$Type == "Local"} {
+       set port $contactPort
+       set server $hostname
+    } else {
+        if {$Type == "Remote" } {
+       		set port $remotePort
+      		set server $remoteServer
+	} else {
+		set port $localPort
+		set server $localServer
+	}
+    }
+    if {$nick != "" } {
+        set com [concat $com "-name \"$nick\""]
+    }
+    if {$port > 0} { set com [concat $com "-port" $port] }
+    if {$maxframesPerSecond > 0} { set com [concat $com "-maxFPS" $maxframesPerSecond] }
+    if { $shipShape != "" } { set com [concat $com "-shipShape \"$shipShape\""] }
+    set com [concat $com $server]
+
+    puts stdout "Background Client=\"$com\""
+    eval exec $com &
+    catch {unset com port server }
+}
+##################################
+proc Verif_Choix { w vl } {
+  global bot xpi shp noo
+
+  if { $vl == "shp" } {
+     set xpi 0
+     set bot 0
+     set noo 0
+     $w.bot deselect
+     $w.xpi deselect
+     $w.noo deselect
+     $w.shp select
+  }
+  if { $vl == "xpi" } {
+     set shp 0
+     set bot 0
+     set noo 0
+     $w.bot deselect
+     $w.shp deselect
+     $w.noo deselect
+     $w.xpi select
+  }
+  if { $vl == "bot" } {
+     set xpi 0
+     set shp 0
+     set noo 0
+     $w.shp deselect
+     $w.xpi deselect
+     $w.noo deselect
+     $w.bot select
+  }
+  if { $vl == "noo" } {
+     set xpi 0
+     set bot 0
+     set shp 0
+     $w.bot deselect
+     $w.xpi deselect
+     $w.shp deselect
+     $w.noo select
+  }
+}
+#################################
+proc showcw { w ok wp } {
+  global tkversion client colbk colact colSe  shp xpi bot noo
+    catch {destroy $w}
+    toplevel $w -bg $colbk
+    wm title $w "Copyright"
+    wm iconname $w "Copyright"
+
+   frame $w.msg -bg $colbk
+    label $w.msg.text10 -text "TkXpInterface version $tkversion" -fg $colact -bg $colbk
+    message $w.msg.text11 -text "(c) 1994 Ramdane FERHATI (Frenchy)\n(c) 1994 Yves-Henri BERNE (Killer)" \
+          -padx 10 -width 400 -fg $colact -bg $colbk
+
+     message $w.msg.text2 -text " This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.\n\
+You should have received a copy of the GNU General Public License along with this program; if not, write to the Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.\n\
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.\n" \
+   -width 500 -fg $colact -bg $colbk -justify left
+
+  if { $ok != 3 } {
+     if { $ok == 1 } {
+         wm geometry $w +[winfo rootx .mainpanel]+[winfo rooty .mainpanel]
+     } else {
+         wm geometry $w +300+100
+     }
+    label $w.msg.etat -text "" -anchor c -fg $colact -bg $colbk
+    pack $w.msg.text10 $w.msg.text11 $w.msg.text2 \
+         $w.msg.etat -side top -fill both -pady 5
+  } else {
+    wm geometry $w +300+100
+    frame $w.d -bg $colbk
+    label $w.msg.choix -text " Which file do you want for shipShape:" \
+          -anchor c -fg $colact -bg $colbk
+    frame $w.msg.cho -bg $colbk
+    checkbutton $w.msg.cho.shp -text "TkXpI.shp" -selectcolor $colSe -fg $colact -bg $colbk \
+        -variable shp -anchor w -relief flat -command "Verif_Choix $w.msg.cho shp "
+    checkbutton $w.msg.cho.xpi -text ".xpilotrc" -selectcolor $colSe -fg $colact -bg $colbk \
+        -variable xpi -anchor w -relief flat -command "Verif_Choix $w.msg.cho xpi"
+    checkbutton $w.msg.cho.bot -text "Both" -selectcolor $colSe -fg $colact -bg $colbk \
+        -variable bot -anchor w -relief flat -command "Verif_Choix $w.msg.cho bot"
+    checkbutton $w.msg.cho.noo -text "No one" -selectcolor $colSe -fg $colact -bg $colbk \
+        -variable noo -anchor w -relief flat -command "Verif_Choix $w.msg.cho noo"
+    pack $w.msg.cho.shp $w.msg.cho.xpi $w.msg.cho.bot $w.msg.cho.noo -side left -fill both -expand yes
+
+    label $w.msg.etat -text " Do you want TkXpInterface for the :" \
+          -anchor c -fg $colact -bg $colbk
+    set client 0
+    button $w.d.cl -width 14 -text Client -fg $colact -bg $colbk -command "
+          set client 1 ;
+          mainproc 1
+          "
+    button $w.d.srv -width 14 -text Server -fg $colact -bg $colbk -command "
+          set client 2 ;
+          mainproc 1
+          "
+    button $w.d.clsrv -width 14 -text  Client&Server -fg $colact -bg $colbk -command "
+          set client 3 ;
+          mainproc 1
+          "
+    button $w.d.ok -width 14 -text Quit -fg $colact -bg $colbk -command "
+          destroy .
+          exit
+          "
+    pack $w.d.cl $w.d.srv $w.d.clsrv $w.d.ok  -side left -fill both -expand yes
+    pack $w.d -side bottom
+    pack $w.msg.text10 $w.msg.text11 $w.msg.text2 \
+         $w.msg.choix $w.msg.cho $w.msg.etat -side top -fill both -pady 5
+  }
+
+    pack $w.msg -side top -anchor center -expand yes -fill both
+}
+##################################
+proc tmkrobot { w wp state} {
+  global colact colbk colSe colsc robotsTalk robotsLeave idleRun \
+         robotLeaveLife robotLeaveScore robotLeaveRatio 
+
+    catch {destroy $w}
+    toplevel $w -bg $colbk
+    wm geometry $w +[winfo rootx $wp]+[expr 6*[winfo reqheight $wp]+[winfo rooty $wp]]
+    wm title $w "Robots"
+    wm iconname $w "Robots"
+
+    checkbutton $w.robotsLeave -text "Robots leave the game" -selectcolor $colSe -fg $colact -bg $colbk \
+        -variable robotsLeave -anchor w -relief flat -command "Robots_leaving $w "
+
+    checkbutton $w.idleRun -text "Robots keep playing" -variable idleRun \
+	-anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
+
+    checkbutton $w.robotsTalk -text "Robots talk" -variable robotsTalk \
+        -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
+
+    frame $w.robotLeaveLife -bg $colbk
+    label $w.robotLeaveLife.txt -text "Max life per robot" -fg $colact -bg $colbk
+    scale $w.robotLeaveLife.scale -orient horizontal -from 0 -to 75 -command \
+		"set robotLeaveLife" -bg $colsc -relief flat -length 200 -width 10
+    pack $w.robotLeaveLife.scale $w.robotLeaveLife.txt -side left -pady 5 -anchor w
+
+    frame $w.robotLeaveScore -bg $colbk
+    label $w.robotLeaveScore.txt -text "Min score for a robot" -fg $colact -bg $colbk
+    scale $w.robotLeaveScore.scale -orient horizontal -from \-100 -to 0 \
+	-command "set robotLeaveScore" -bg $colsc -relief flat -length 200 -width 10
+     pack $w.robotLeaveScore.scale $w.robotLeaveScore.txt -side left -pady 5 -anchor w
+
+    frame $w.robotLeaveRatio -bg $colbk
+    label $w.robotLeaveRatio.txt -text "Min ratio for a robot" -fg $colact -bg $colbk
+    scale $w.robotLeaveRatio.scale -orient horizontal -from \-10 -to 0 \
+	-command "set robotLeaveRatio" -bg $colsc -relief flat -length 200 -width 10
+    pack $w.robotLeaveRatio.scale $w.robotLeaveRatio.txt -side left -pady 5
+
+ if { $state == "U" } {
+    pack $w.robotsLeave $w.idleRun $w.robotsTalk $w.robotLeaveLife \
+         $w.robotLeaveScore $w.robotLeaveRatio  \
+         -side top -expand no -fill both -padx 10 -pady 5
+  } else {
+    pack $w.robotsLeave $w.idleRun $w.robotsTalk $w.robotLeaveLife \
+         $w.robotLeaveScore $w.robotLeaveRatio  \
+         -side top -expand no -fill both -padx 10 -pady 5
+  }
+
+    $w.robotLeaveLife.scale set $robotLeaveLife
+    $w.robotLeaveScore.scale set $robotLeaveScore
+    $w.robotLeaveRatio.scale set $robotLeaveRatio
+
+    button $w.quit -text " OK " -command "destroy $w" -fg $colact -bg $colbk
+    pack $w.quit  -side top -expand yes -fill both
+    Robots_leaving $w
+}
+##################################
+proc tmkteam { w wp state } {
+  global colact colbk colSe targetSync targetKillTeam teamAssign teamImmunity \
+	 targetTeamCollision reset \
+         treasureKillTeam treasureCollisionDestroys treasureCollisionMayKill
+    catch {destroy $w}
+    toplevel $w -bg $colbk
+    wm geometry $w +[winfo rootx $wp]+[expr 3*[winfo reqheight $wp]+[winfo rooty $wp]]
+    wm title $w "Team"
+    wm iconname $w "Team"
+
+    set k 0
+    foreach i { reset=The\ world\ reset\ when\ the\ end\ of\ round\ is\ reached \
+      targetKillTeam=Team\ dies\ when\ target\ explodes \
+      teamAssign=Player\ assigned\ to\ first\ non-empty\ team\ if\ team\ isn't\ set \
+      teamImmunity=Other\ team\ members\ immuned\ to\ various\ shots,\ thrust\ etc. \
+      targetTeamCollision=Team\ members\ collide\ with\ their\ own\ target\ or\ not \
+      targetSync=Targets\ reappear\ and\ repair\ at\ the\ same\ time \
+      treasureKillTeam=Team\ members\ die\ when\ treasure\ is\ destroyed \
+      treasureCollisionDestroys=Destroy\ balls\ on\ collisions \
+      treasureCollisionMayKill=Unshielded\ collision\ kills\ the\ player } {
+          incr k
+          if {($state == "U") && (($k == 1) || ($k == 2) || ($k == 5))} {
+	  } else {
+            set pos [string first "=" $i]
+            set v1 [string range $i 0 [expr $pos-1]]
+            set v2 [string range $i [expr $pos+1] end]
+            upvar #0 $v1 j
+            checkbutton $w.$v1 -text $v2  -variable $v1 -fg $colact -bg $colbk \
+                      -anchor w -relief flat -selectcolor $colSe
+            pack $w.$v1 -side top -fill both -expand yes -padx 10 -pady 5
+          }
+     }
+    button $w.quit -text " OK " -command "destroy $w" -fg $colact -bg $colbk
+    pack $w.quit -side top -expand yes -fill both
+    catch {unset i v1 v2 pos}
+}
+##################################
+proc tmkshield { w wp state} {
+  global colact colbk colSe shieldedItemPickup shieldedMining playerStartsShielded allowShields
+    catch {destroy $w}
+    toplevel $w -bg $colbk
+    wm geometry $w +[winfo rootx $wp]+[expr 8*[winfo reqheight $wp]+[winfo rooty $wp]]
+    wm title $w "Shield"
+    wm iconname $w "Shield"
+
+  if {$state != "U"} {
+    checkbutton $w.playerStartsShielded -text "Start shielded" -variable \
+            playerStartsShielded -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
+  }
+
+  if {$state != "U"} {
+    checkbutton $w.allowShields -text "Use shields" -variable allowShields \
+       -anchor w -relief flat -command "no_shield $w" -selectcolor $colSe -fg $colact -bg $colbk
+  }
+
+    checkbutton $w.shieldedItemPickup -text "Pick up with shields on" \
+        -variable shieldedItemPickup -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
+
+    checkbutton $w.shieldedMining -text "Drop/throw mine with shields on" \
+        -variable shieldedMining -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
+
+  if {$state != "U"} {
+    pack $w.playerStartsShielded $w.allowShields $w.shieldedItemPickup \
+         $w.shieldedMining -side top -expand yes -fill both -padx 10 -pady 5
+  } else {
+    pack $w.shieldedItemPickup $w.shieldedMining \
+         -side top -expand yes -fill both -padx 10 -pady 5
+  }
+
+    button $w.quit -text " OK " -command "destroy $w" -fg $colact -bg $colbk
+    pack $w.quit -side top -expand yes -fill both
+  if {$state != "U"} {
+    no_shield $w
+  }
+}
+##################################
+proc tmkradar { w wp state } {
+  global colact colbk colSe playersOnRadar limitedVisibility missilesOnRadar \
+         minesOnRadar nukesOnRadar distinguishMissiles treasuresOnRadar \
+         minVisibilityDistance maxVisibilityDistance
+    catch {destroy $w}
+    toplevel $w -bg $colbk
+    wm geometry $w +[winfo rootx $wp]+[expr 5*[winfo reqheight $wp]+[winfo rooty $wp]]
+    wm title $w "Radar"
+    wm iconname $w "Radar"
+
+    foreach i { playersOnRadar=Players\ visible\ on\ radar \
+      limitedVisibility=Limited\ visibility \
+      missilesOnRadar=Missiles\ visible\ on\ radar \
+      minesOnRadar=Mines\ visible\ on\ the\ radar \
+      nukesOnRadar=Nukes\ visible\ or\ highlighted\ on\ radar \
+      treasuresOnRadar=Treasures\ visible\ or\ highlighted\ on\ radar \
+      distinguishMissiles=Types\ of\ missiles\ distinguished\ (by\ length) } {
+          set pos [string first "=" $i]
+          set v1 [string range $i 0 [expr $pos-1]]
+          set v2 [string range $i [expr $pos+1] end]
+          upvar #0 $v1 j
+          if { $v1=="playersOnRadar" } {
+             checkbutton $w.$v1 -text $v2  -variable $v1 -anchor w -relief flat\
+             -command "no_visibility $w" -selectcolor $colSe -fg $colact -bg $colbk
+          } else {
+            checkbutton $w.$v1 -text $v2  -variable $v1 \
+                  -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
+          }
+          pack $w.$v1 -side top -fill both -expand yes -padx 10 -pady 5
+     }
+
+   if {$state != "U"} {
+    foreach i {
+     minVisibilityDistance=Minimum\ block\ distance\ for\ limited\ visibility\
+     maxVisibilityDistance=Maximum\ block\ distance\ for\ limited\ visibility } {
+        set pos [string first "=" $i]
+        set v1 [string range $i 0 [expr $pos-1]]
+        set v2 [string range $i [expr $pos+1] end]
+        upvar #0 $v1 j
+        frame $w.$v1 -bg $colbk
+        label $w.$v1.l -text $v2 -anchor w -fg $colact -bg $colbk
+        entry $w.$v1.e -width 5 -relief sunken -textvariable $v1 -fg $colact -bg $colbk
+        pack $w.$v1.e $w.$v1.l -side left -fill both
+        pack $w.$v1 -side top -fill both -expand yes -padx 10 -pady 5
+        bind $w.$v1.e <Return> " "
+    }
+   }
+
+    button $w.quit -text " OK " -command "destroy $w" -fg $colact -bg $colbk
+    pack $w.quit -side top -expand yes -fill both
+    no_visibility $w
+    catch {unset i v1 v2 pos}
+}
+##################################
+proc tmkweapon { w wp state} {
+  global colact colbk colSe nukeClusterDamage mineFuseTime nukeMinSmarts nukeMinMines colsc \
+         laserIsStunGun allowClusters allowModifiers allowLaserModifiers allowNukes \
+         maxMissilesPerPack rogueHeatProb rogueMineProb
+    catch {destroy $w}
+    toplevel $w -bg $colbk
+    wm geometry $w +[winfo rootx $wp]+[expr 1*[winfo reqheight $wp]+[winfo rooty $wp]]
+    wm title $w "Weapons"
+    wm iconname $w "Weapons"
+    set k 0
+    foreach i {
+ nukeClusterDamage=How\ much\ each\ cluster\ debris\ does\ damage\ wise\ from\ a\ nuke\ variant \
+ mineFuseTime=Time\ after\ which\ owned\ mines\ become\ deadly,\ 0\ means\ never
+ rogueHeatProb=Probability\ that\ unclaimed\ missile\ packs\ will\ go\ rogue \
+ rogueMineProb=Probability\ that\ unclaimed\ mines\ will\ activate } {
+        incr k 1
+        set pos [string first "=" $i]
+        set v1 [string range $i 0 [expr $pos-1]]
+        set v2 [string range $i [expr $pos+1] end]
+      if {($state == "U") && ($k == 2)} {
+      } else {
+        upvar #0 $v1 j
+        frame $w.$v1 -bg $colbk
+        label $w.$v1.l -text $v2 -anchor w -fg $colact -bg $colbk
+        entry $w.$v1.e -width 5 -relief sunken -textvariable $v1 -fg $colact -bg $colbk
+        pack $w.$v1.e $w.$v1.l -side left -fill both
+        pack $w.$v1 -side top -fill both -expand yes -padx 10 -pady 5
+        bind $w.$v1.e <Return> " "
+      }
+    }
+
+    set k 0
+    foreach i { laserIsStunGun=Laser\ is\ a\ stun\ gun \
+      allowClusters=Clusters\ weapons\ allowed \
+      allowModifiers=Weapon\ modifiers\ allowed \
+      allowLaserModifiers=Lasers\ modified\ to\ be\ a\ different\ weapon \
+      ecmsReprogramMines=ECMs\ reprogram\ mines \
+      allowNukes=Nuclear\ weapons\ allowed \
+      identifyMines=Mine\ owner's\ names\ displayed } {
+	  incr k 1
+          set pos [string first "=" $i]
+          set v1 [string range $i 0 [expr $pos-1]]
+          set v2 [string range $i [expr $pos+1] end]
+          upvar #0 $v1 j
+	if {($state == "U") && ($k != 1) && ($k != 5) } {
+        } else {
+          checkbutton $w.$v1 -text $v2  -variable $v1 -anchor w -relief flat \
+                      -selectcolor $colSe -fg $colact -bg $colbk
+          pack $w.$v1 -side top -fill both -expand yes -padx 10 -pady 5
+        }
+     }
+
+    frame $w.s -bg $colbk
+    set k 0
+    foreach i {
+  nukeMinSmarts=Min\ of\ smart\ missiles\ to\ make\ a\ nuclear\ variant \
+  nukeMinMines=Min\ of\ mines\ to\ make\ a\ nuclear\ variant
+  maxMissilesPerPack=Max\ of\ missiles\ per\ pack\ } {
+  	  incr k 1
+          set pos [string first "=" $i]
+          set v1 [string range $i 0 [expr $pos-1]]
+          set v2 [string range $i [expr $pos+1] end]
+          upvar #0 $v1 j
+       if {($state == "U") && ($k == 3)} {
+       } else {
+          frame $w.s.$v1 -bg $colbk
+          label $w.s.$v1.txt -text $v2 -fg $colact -bg $colbk
+          scale $w.s.$v1.scale -orient horizontal -from 0 -to 50 \
+              -command "set $v1" -bg $colsc -relief flat -length 200 -width 10
+          pack $w.s.$v1.scale $w.s.$v1.txt -side left -anchor w -pady 5
+          pack $w.s.$v1 -side top -anchor w -pady 5
+          upvar #0 $v1 v3
+          $w.s.$v1.scale set $v3
+       }
+     }
+    pack $w.s -side top -fill both -padx 10 -pady 5
+    button $w.quit -text " OK " -command "destroy $w" -fg $colact -bg $colbk
+    pack $w.quit -expand yes -fill both     
+    catch {unset i v1 v2 pos}
+}
+##################################
+proc tmkplayer { w wp state } {
+  global colact colbk colSe allowPlayerCrashes allowPlayerKilling \
+         allowPlayerBounces limitedLives worldLives colsc
+    catch {destroy $w}
+    toplevel $w -bg $colbk
+    wm geometry $w +[winfo rootx $wp]+[expr 7*[winfo reqheight $wp]+[winfo rooty $wp]]
+    wm title $w "Player"
+    wm iconname $w "Player"
+
+  if {$state != "U" } {
+    checkbutton $w.allowPlayerCrashes -text "Players can crash into each other"\
+        -variable allowPlayerCrashes -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
+  }
+
+  if {$state != "U" } {
+    checkbutton $w.allowPlayerKilling -text "Players can kill each other" \
+        -variable allowPlayerKilling -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
+  }
+
+  if {$state != "U" } {
+    checkbutton $w.allowPlayerBounces -text "Players bounce with other players" \
+        -variable allowPlayerBounces -anchor w -relief flat -selectcolor $colSe -fg $colact -bg $colbk
+  }
+
+  if {$state != "U" } {
+    checkbutton $w.limitedLives -text "Limited lives" -variable limitedLives \
+        -anchor w -relief flat -command "lim_worldLives $w " -selectcolor $colSe -fg $colact -bg $colbk
+  }
+
+  if {$state != "U" } {
+    frame $w.worldLives -bg $colbk
+    label $w.worldLives.txt -text "Number of lives" -fg $colact -bg $colbk
+    scale $w.worldLives.scale -orient horizontal -from 1 -to 10 -command "set \
+        worldLives" -bg $colsc -relief flat -length 200 -width 10
+    pack $w.worldLives.scale $w.worldLives.txt -side left -expand yes -anchor w
+  }
+
+  if {$state != "U" } {
+    pack $w.limitedLives $w.allowPlayerCrashes $w.allowPlayerKilling \
+       $w.allowPlayerBounces $w.worldLives -side top -expand yes -fill both -padx 10 -pady 5
+  }
+
+    catch {$w.worldLives.scale set $worldLives}
+    button $w.quit -text " OK " -command "destroy $w" -fg $colact -bg $colbk
+    pack $w.quit -side top -expand yes -fill both
+  if {$state != "U" } {
+    lim_worldLives $w
+  }
+}
+##################################
+proc tmkbounce { w wp state } {
+  global colact colbk colSe edgeWrap   edgeBounce  extraBorder   shotsWallBounce \
+         ballsWallBounce        itemsWallBounce            sparksWallBounce \
+         minesWallBounce        missilesWallBounce         debrisWallBounce \
+         maxObjectWallBounceSpeed maxShieldedWallBounceSpeed \
+         maxUnshieldedWallBounceSpeed \
+         maxShieldedPlayerWallBounceAngle maxUnshieldedPlayerWallBounceAngle \
+         playerWallBounceBrakeFactor objectWallBounceBrakeFactor \
+         objectWallBounceLifeFactor  wallBounceFuelDrainMult
+    catch {destroy $w}
+    toplevel $w -bg $colbk
+    wm geometry $w +[winfo rootx $wp]+[expr 2*[winfo reqheight $wp]+[winfo rooty $wp]]
+    wm title $w "Bounce"
+    wm iconname $w "Bounce"
+
+  if {$state != "U"} {
+   frame $w.e -bg $colbk
+   checkbutton $w.e.edgeWrap -text "Edge wrap" -variable edgeWrap -anchor w \
+        -relief flat -command "edges $w edgeWrap" -selectcolor $colSe -fg $colact -bg $colbk
+   checkbutton $w.e.edgeBounce -text "Edge bouncing" -variable edgeBounce \
+        -anchor w -relief flat -command "edges $w edgeBounce" -selectcolor $colSe -fg $colact -bg $colbk
+   checkbutton $w.e.extraBorder -text "Extra border" -variable extraBorder \
+        -anchor w -relief flat -command "edges $w extraBorder" -selectcolor $colSe -fg $colact -bg $colbk
+
+   pack $w.e.extraBorder $w.e.edgeWrap $w.e.edgeBounce \
+       -side left -expand yes -fill both
+   pack $w.e -side top -expand yes -fill both -padx 10 -pady 5
+ }
+
+  if {$state != "U"} {
+   label $w.label -text "Bounce on the wall"  -anchor c -fg $colact -bg $colbk
+   pack $w.label -side top -fill both -expand yes
+   frame $w.b -bg $colbk
+   foreach i { shotsWallBounce=Shots ballsWallBounce=Balls \
+     minesWallBounce=Mines itemsWallBounce=Items \
+     missilesWallBounce=Missiles sparksWallBounce=Sparks \
+     debrisWallBounce=Debris } {
+       set pos [string first "=" $i]
+       set v1 [string range $i 0 [expr $pos-1]]
+       set v2 [string range $i [expr $pos+1] end]
+       upvar #0 $v1 j
+       checkbutton $w.b.$v1 -text $v2  -variable $v1 -anchor w -relief flat \
+                   -selectcolor $colSe -fg $colact -bg $colbk
+       pack $w.b.$v1 -side left -fill both -expand yes
+   }
+   pack $w.b -side top -expand yes -fill both -padx 10 -pady 5
+ }
+
+  if {$state != "U"} {
+   foreach i {
+ maxObjectWallBounceSpeed=Maximum\ allowed\ speed\ for\ objects\ to\ bounce\ off\ walls
+ maxShieldedWallBounceSpeed=Maximum\ allowed\ speed\ for\ a\ shielded\ player\ to\ bounce\ off\ walls \
+ maxUnshieldedWallBounceSpeed=Maximum\ allowed\ speed\ for\ an\ unshielded\ player\ to\ bounce\ off\ walls \
+ maxShieldedPlayerWallBounceAngle=Maximum\ allowed\ angle\ for\ a\ shielded\ player\ to\ bounce\ off\ walls \
+ maxUnshieldedPlayerWallBounceAngle=Maximum\ allowed\ angle\ for\ an\ unshielded\ player\ to\ bounce\ off\ walls \
+ playerWallBounceBrakeFactor=Factor\ to\ slow\ down\ players\ when\ they\ hit\ the\ wall\ (between\ 0\ &\ 1) \
+ objectWallBounceBrakeFactor=Factor\ to\ slow\ down\ objects\ when\ they\ hit\ the\ wall\ (between\ 0\ &\ 1) \
+ objectWallBounceLifeFactor=Factor\ to\ reduce\ the\ life\ of\ objects\ after\ bouncing\ (between\ 0\ &\ 1) \
+ wallBounceFuelDrainMult=Multiplication\ factor\ for\ player\ wall\ bounce\ fuel\ cost. } {
+       set pos [string first "=" $i]
+       set v1 [string range $i 0 [expr $pos-1]]
+       set v2 [string range $i [expr $pos+1] end]
+       upvar #0 $v1 j
+       frame $w.$v1 -bg $colbk
+       label $w.$v1.l -text $v2 -anchor w -fg $colact -bg $colbk
+       entry $w.$v1.e -width 5 -relief sunken -textvariable $v1 -fg $colact -bg $colbk
+       pack $w.$v1.e $w.$v1.l -side left 
+       pack $w.$v1 -side top -fill both -expand yes -padx 10 -pady 5
+       bind $w.$v1.e <Return> " "
+   }
+ }
+   button $w.quit -text " OK " -command "destroy $w" -fg $colact -bg $colbk
+   pack $w.quit -side bottom -expand yes -fill both
+   catch {unset i v1 v2 pos}
+}
+##################################
+proc tmkrace { w wp state } {
+  global colact colbk colSe colsc RaceLaps checkpointRadius \
+    catch {destroy $w}
+    toplevel $w -bg $colbk
+    wm geometry $w +[winfo rootx $wp]+[expr 4*[winfo reqheight $wp]+[winfo rooty $wp]]
+    wm title $w "Race"
+    wm iconname $w "Race"
+
+     set k 0
+     foreach i {checkpointRadius=How\ close\ you\ have\ to\ be\ to\ a\ checkpoint\ to\ register\ -\ in\ blocks \
+        raceLaps=How\ many\ laps\ a\ race\ is\ run\ over} {
+	  incr k 1
+          set pos [string first "=" $i]
+          set v1 [string range $i 0 [expr $pos-1]]
+          set v2 [string range $i [expr $pos+1] end]
+          upvar #0 $v1 j
+	if {($state == "U") && ($k == 2)} {
+	} else {
+          frame $w.$v1 -bg $colbk
+          label $w.$v1.l -text $v2 -anchor w -fg $colact -bg $colbk
+          entry $w.$v1.e -width 5 -relief sunken -textvariable $v1 -fg $colact -bg $colbk
+          pack $w.$v1.e $w.$v1.l -side left -fill both -expand no
+          pack $w.$v1 -side top -fill both -expand no -padx 10 -pady 5 
+          bind $w.$v1.e <Return> " "
+        }
+     }
+
+    button $w.quit -text " OK " -command "destroy $w" -fg $colact -bg $colbk
+    pack $w.quit -side bottom -expand yes -fill both
+    catch {unset i v1 v2 pos}
+}
+##################################
+proc tmkmisc { w wp state } {
+  global colact colbk colSe colsc allowShipShapes    shipMass shotMass   shotSpeed \
+         shotLife fireRepeatRate maxPlayerShots shotsGravity itemConcentratorRadius
+    catch {destroy $w}
+    toplevel $w -bg $colbk
+    wm geometry $w +[winfo rootx $wp]+[expr 4*[winfo reqheight $wp]+[winfo rooty $wp]]
+    wm title $w "Misc."
+    wm iconname $w "Misc."
+
+  if { $state != "U"} {
+     checkbutton $w.allowShipShapes \
+       -text "Players allowed to define their own ship shape" \
+       -variable allowShipShapes -anchor w -relief flat -padx 10 -pady 5 \
+       -selectcolor $colSe -fg $colact -bg $colbk
+  }
+
+    checkbutton $w.shotsGravity -text "Are bullets affected by gravity" \
+       -variable shotsGravity -anchor w -relief flat -pady 5 \
+       -selectcolor $colSe -fg $colact -bg $colbk
+     set k 0
+     foreach i {shipMass=Ship\ mass \
+        shotMass=Shot\ mass \
+        shotSpeed=Shot\ speed \
+        friction=Fraction\ of\ velocity\ ship\ loses\ each\ frame } {
+          incr k 1
+          set pos [string first "=" $i]
+          set v1 [string range $i 0 [expr $pos-1]]
+          set v2 [string range $i [expr $pos+1] end]
+          upvar #0 $v1 j
+        if { ($state == "U") && ($k != 4)} {
+        } else {
+          frame $w.$v1 -bg $colbk
+          label $w.$v1.l -text $v2 -anchor w -fg $colact -bg $colbk
+          entry $w.$v1.e -width 5 -relief sunken -textvariable $v1 -fg $colact -bg $colbk
+          pack $w.$v1.e $w.$v1.l -side left -fill both -expand no
+          pack $w.$v1 -side top -fill both -expand no -padx 10 -pady 5 
+          bind $w.$v1.e <Return> " "
+        }
+     }
+
+  if { $state != "U"} {
+    frame $w.shotLife -bg $colbk
+    label $w.shotLife.txt -text "Life of bullets" -fg $colact -bg $colbk
+    scale $w.shotLife.scale -orient horizontal -from 0 -to 150 -command \
+        "set shotLife" -bg $colsc -relief flat -length 200  -width 10
+    pack  $w.shotLife.scale $w.shotLife.txt -side left -pady 5 -anchor w
+  }
+
+    frame $w.fireRepeatRate -bg $colbk
+    label $w.fireRepeatRate.txt -text "Frames per automatic fire" -anchor w -fg $colact -bg $colbk
+    scale $w.fireRepeatRate.scale -orient horizontal -from 0 -to 50 -command \
+        "set fireRepeatRate" -bg $colsc -relief flat -length 200 -width 10
+    pack $w.fireRepeatRate.scale $w.fireRepeatRate.txt -side left -pady 5 -anchor w
+
+  if { $state != "U"} {
+    frame $w.maxPlayerShots -bg $colbk
+    label $w.maxPlayerShots.txt -text "Max player shots" -anchor w -fg $colact -bg $colbk
+    scale $w.maxPlayerShots.scale -orient horizontal -from 0 -to 500 \
+        -command "set maxPlayerShots" -bg $colsc -relief flat -length 200 -width 10
+    pack $w.maxPlayerShots.scale $w.maxPlayerShots.txt -side left -pady 5 -anchor w
+  }
+
+  if { $state != "U"} {
+    frame $w.itemConcentratorRadius -bg $colbk
+    label $w.itemConcentratorRadius.txt -text "item Concentrator Radius" -anchor w -fg $colact -bg $colbk
+    scale $w.itemConcentratorRadius.scale -orient horizontal -from 1 -to 20 \
+        -command "set itemConcentratorRadius" -bg $colsc -relief flat -length 200 -width 10
+    pack $w.itemConcentratorRadius.scale $w.itemConcentratorRadius.txt -side left -pady 5 -anchor w
+  }
+
+  if { $state != "U"} {
+    pack $w.shotsGravity $w.shotLife $w.fireRepeatRate $w.maxPlayerShots $w.itemConcentratorRadius \
+         -side top -expand no -fill both -padx 10 -pady 5
+  } else {
+    pack $w.shotsGravity $w.fireRepeatRate \
+         -side top -expand no -fill both -padx 10 -pady 5
+  }
+
+    catch {$w.maxPlayerShots.scale set $maxPlayerShots}
+    $w.fireRepeatRate.scale set $fireRepeatRate
+    catch {$w.shotLife.scale set $shotLife}
+    catch {$w.itemConcentratorRadius.scale set $itemConcentratorRadius}
+
+    button $w.quit -text " OK " -command "destroy $w" -fg $colact -bg $colbk
+  if { $state != "U"} {
+    pack $w.quit $w.allowShipShapes -side bottom -expand yes -fill both
+  } else {
+    pack $w.quit -side bottom -expand yes -fill both
+  }
+    catch {unset i v1 v2 pos}
+}
+##################################
+proc mkhelp { c x y } {
+  global lib_dir client colbk colact
+
+  if {[file readable $lib_dir/TkXpI.hlp ] == 0 } {
+      puts stderr "Error Help file : I can't read $lib_dir/TkXpI.hlp file !"
+      return
+  }
+
+ switch -regexp $c {
+    .topbuttons.robot*  { set id  1}
+    .topbuttons.team*   { set id  2}
+    .topbuttons.shield* { set id  3}
+    .topbuttons.radar*  { set id  4}
+    .topbuttons.weapon* { set id  5}
+    .topbuttons.player* { set id  6}
+    .topbuttons.bounce* { set id  7}
+    .topbuttons.misc*   { set id  8}
+    .botbuttons.start*  { set id 9}
+    .botbuttons.copy*   { set id 10}
+    .botbuttons.items*  { set id 11}
+    .botbuttons.save*   { set id 12}
+    .botbuttons.meta*   { set id 13}
+    .botbuttons.loca*   { set id 13}
+    .metab.meta*        { set id 13}
+    .botbuttons.join*   { set id 14}
+    .botbuttons.quit*   { set id 15}
+    .mainpanel.main.whichmap.map.mp*  { set id 16}
+    .mainpanel.main.path*             { set id 16}
+    .mainpanel.main.whichmap.map.ship { set id 17}
+    .metab.ship                       { set id 17} 
+    .mainpanel.main.check             { set id 18}
+    .mainpanel.main.whichmap.bitmap   { set id 19}
+    .botbuttons.upd                   { set id 20}
+    .topbuttons.race*                 { set id 21}
+    default                           { set id 0 }
+ }
+    if { $client == 1} { set w .help
+    } else { set w .mainpanel.help }
+
+    catch {destroy $w}
+    toplevel $w -bg $colbk
+    wm geometry $w +$x+[expr 10+$y]
+    wm title $w "Help"
+    wm iconname $w "Help"
+
+    button $w.ok -text Quit -command "destroy $w" -fg $colact -bg $colbk
+    text $w.t -relief raised -bd 2 -yscrollcommand "$w.s set" -fg $colact -bg $colbk
+    scrollbar $w.s -relief flat -command "$w.t yview" -activebackground $colact -bg $colbk
+    pack $w.ok -side bottom -fill x -expand yes
+    pack $w.s -side right -fill y
+
+    set cf [$w.ok configure -bg]
+    set cf [string range $cf [expr 1+[string last " " $cf]] end]
+    set cg [$w.ok configure -fg]
+    set cg [string range $cg [expr 1+[string last " " $cg]] end]
+
+    $w.t tag configure raised -relief raised -borderwidth 2 -background $cg -foreground $cf
+    $w.t tag configure sunken -relief sunken -borderwidth 2 -background $cg -foreground $cf
+    $w.t tag configure underline -underline on
+
+    set msg [lindex [read [open $lib_dir/TkXpI.hlp]] [expr $id ]]
+    set msg [split $msg \n]
+    foreach i $msg {
+          set tg {}
+          if [string match *^* $i] {
+             set k [split $i ]
+             foreach j $k {
+                if {[string range $j 0 0] != "^" } {
+                   set start [$w.t index insert]
+                   $w.t insert insert "$j "
+                   foreach tag [$w.t tag names $start] {
+                     $w.t tag remove $tag $start insert
+                   }
+                   if { $tg != "" } {
+                     $w.t tag add $tg $start insert
+                     set tg ""
+                   }
+                } else {
+                     switch -glob $j {
+                           ^U  { set tg underline }
+                           ^R  { set tg raised }
+                           ^S  { set tg sunken }
+                       default { set tg "" }
+                     }
+                }
+             }
+             $w.t insert end "\n"
+          } else {
+             $w.t insert end "$i\n"
+          }
+    }
+    unset msg
+    pack $w.t -expand yes -fill both
+}
+##################################   Main Program  ################################
+proc mainproc v {
+  global maps_dir temp_dir lib_dir defaults_file default_mapfile motd sub_dir zext \
+         compr map client home_dir scoreTableFileName colbk colact cmpt noo
+
+if $v {
+    .botbuttons.copyb.d.cl configure -state disabled
+    .botbuttons.copyb.d.srv configure -state disabled
+    .botbuttons.copyb.d.clsrv configure -state disabled
+    .botbuttons.copyb.d.ok configure -state disabled
+}
+
+if [catch {eval exec xpilots -version }] {
+    puts stderr "\"xpilots\" is not installed or isn't in your PATH"
+}
+
+if [catch {eval exec xpilot -version }] {
+    puts stderr "\"xpilot\" is not installed or isn't in your PATH"
+}
+
+if {[file isdirectory $temp_dir] == 0 } {
+   puts stderr "The tempo dir. \"$temp_dir\" doesn't exist or isn't a directory !"
+   puts stderr "         use  \"$home_dir\" "
+   set temp_dir $home_dir
+}
+
+if {[file isdirectory $lib_dir] == 0 } {
+   puts stderr "The library dir. \"$lib_dir\" doesn't exist or isn't a directory !"
+   puts stderr "         use  \"$home_dir\" "
+   set lib_dir $home_dir
+}
+
+if { [file isfile $lib_dir/TkXpI.hlp] == 0 } {
+   puts stderr "The help file \"$lib_dir/TkXpI.hlp\" doesn't exist or isn't a file !"
+}
+
+if {$client != 1} {#Param server
+  if {[file isdirectory $maps_dir] == 0 } {
+   puts stderr "The maps dir. \"$maps_dir\" doesn't exist or isn't a directory !"
+   puts stderr "         use  \"$home_dir\" "
+   set maps_dir $home_dir
+  }
+
+  if { [file isfile $defaults_file] == 0 } {
+   puts stderr "The default file \"$defaults_file\" doesn't exist or isn't a file !"
+   set defaults_file ""
+  }
+
+  if { ([file isfile $maps_dir/$default_mapfile.map] == 0) && \
+     ([file isfile $maps_dir/$default_mapfile.map$zext] == 0) } {
+    puts stderr "The file \"$maps_dir/$default_mapfile.map\" or\n\
+   \"$maps_dir/$default_mapfile.map$zext\" doesn't exist or isn't a file !"
+  }
+
+  if { ([file isfile $motd] == 0) && ( $motd != "") } {
+   puts stderr "The motd file \"$motd\" doesn't exist or isn't a file !"
+  }
+
+  if { ([file isfile $scoreTableFileName] == 0) && ( $scoreTableFileName != "") } {
+   puts stderr "The score file \"$scoreTableFileName\" doesn't exist or isn't a file !"
+  }
+
+  if {[file exist $sub_dir/$default_mapfile.map$zext]} {
+    set compr 1
+    set default_mapfile "$default_mapfile\*"
+  } else { set compr 0 }
+}
+
+if {$client != 2} {#Param client
+  if { [file isfile $lib_dir/TkXpI.shp] == 0 } {
+   puts stderr "The ship shapes file \"$lib_dir/TkXpI.shp\" doesn't exist or isn't a file !"
+  }
+}
+
+if { $client != 1 } {
+     frame .mainpanel -bg $colbk
+     frame .mainpanel.main -bg $colbk
+}
+wm withdraw .
+update
+
+if { $client != 1 } {
+   frame .mainpanel.main.whichmap -bg $colbk
+   frame .mainpanel.main.whichmap.map -bg $colbk
+   mkmaps .mainpanel.main.whichmap.map
+
+   frame .mainpanel.main.path -bg $colbk
+   mkpath .mainpanel.main
+   mkcheck .mainpanel.main.check N
+
+   frame .topbuttons -bg $colbk
+   set w .topbuttons
+   button $w.weapon -text "Weapons" -command "tmkweapon $w.weaponb $w.weapon N " -fg $colact -bg $colbk
+   button $w.bounce -text "Bounce"  -command "tmkbounce $w.bounceb $w.bounce N " -fg $colact -bg $colbk
+   button $w.team   -text "Team"    -command "tmkteam   $w.teamb $w.team N " -fg $colact -bg $colbk
+   button $w.race   -text "Race"    -command "tmkrace   $w.raceb $w.race N " -fg $colact -bg $colbk
+   button $w.misc   -text "Misc."   -command "tmkmisc   $w.miscb $w.misc N " -fg $colact -bg $colbk
+   button $w.radar  -text "Radar"   -command "tmkradar  $w.radarb $w.radar N " -fg $colact -bg $colbk
+   button $w.robot  -text "Robots"  -command "tmkrobot  $w.robotb $w.robot N " -fg $colact -bg $colbk
+   button $w.player -text "Player"  -command "tmkplayer $w.playerb $w.robot N " -fg $colact -bg $colbk
+   button $w.shield -text "Shield"  -command "tmkshield $w.shieldb $w.robot N " -fg $colact -bg $colbk
+
+   pack $w.weapon $w.bounce $w.team $w.race $w.misc $w.radar $w.robot \
+        $w.player $w.shield -side left -expand yes -fill both
+   pack $w -side top -expand yes -fill both
+
+   set w .botbuttons
+   button $w.start -text "Start server" -fg $colact -bg $colbk \
+          -command "read_write_exec_mapfile $map \"E\" 0"
+   button $w.upd -text "Update server" -width 13 -fg $colact -bg $colbk \
+           -command "mkupdserver $w.updb .mainpanel "
+   button $w.items -text "Items setup" -fg $colact -bg $colbk \
+          -command "mkitem_init $w.itemsb .mainpanel P "
+   button $w.save  -text "Map file" -fg $colact -bg $colbk \
+          -command "save_delete_map $w.copyb $w.items "
+   button $w.quit -text " Quit " -fg $colact -bg $colbk \
+          -command {
+            catch {eval exec rm -f $temp_dir/TkXpI.mp$cmpt}
+            catch {eval exec rm -f $temp_dir/TkXpI.srv$cmpt}
+            destroy .  }
+
+   if {$client == 3} {
+	if {$noo == 0 } {
+           mkship .mainpanel.main.whichmap.map.ship
+	}
+     button $w.loc -fg $colact -bg $colbk -text "Local Servers" -command "
+	update
+	mklocalserver $w.locab 
+	$w.locab.local.f.up configure -relief sunken -text Updating...
+	update
+        update_local $w.locab.local 
+        update_localist $w.locab $w.locab.c
+        $w.loc configure -relief raised -text \"Local Servers\"
+	$w.locab.local.f.up configure -relief raised -text Update
+	"
+     button $w.meta -text "Meta-server" -fg $colact -bg $colbk -command "mkmetaserver $w.metab "
+     button $w.join -text "Play the game" -fg $colact -bg $colbk -command "playgame Local "
+     pack $w.start $w.upd $w.items $w.save $w.loc $w.meta $w.join $w.quit \
+        -side left -expand yes -fill both
+   } else {
+     pack $w.start $w.upd $w.items $w.save $w.quit \
+        -side left -expand yes -fill both
+   }
+   pack $w -side bottom -expand yes -fill both
+   catch {unset $w}
+   pack .mainpanel.main.whichmap .mainpanel.main.check \
+        -anchor n -fill both -expand yes -side left
+
+   pack .mainpanel.main -side top -expand yes -fill both
+   pack .mainpanel -side top -expand yes -fill both
+
+   mkbitmap .mainpanel.main.whichmap
+   setmaps
+   read_default
+   read_xpilotrc
+   maps_update $default_mapfile
+} else {
+   mkmetaserver .metab
+   if {$noo == 0 } {
+       mkship  .metab.ship 
+   }
+   read_xpilotrc
+   update
+   destroy {.botbuttons.copyb}
+}
+bind all <Button3-ButtonRelease> {mkhelp  %W %X %Y}
+wm deiconify .
+}
+##################################   Main Program  ################################
+puts stdout "\
+  Copyright 1994 by Ramdane FERHATI & Yves-Henri BERNE
+  TkXpInterface-$tkversion comes with ABSOLUTELY NO WARRANTY\n"
+set sub_dir $maps_dir
+set cur_dir $maps_dir
+set map $default_mapfile
+set metsens 1
+set smax 3
+set s1v 3
+set s2v 1
+set s3v 0
+set s4v 0
+set s5v 2
+set cs1v 9
+set cs2v 3
+set cs3v 4
+set cs4v 0
+set cs5v 1
+set metsort debut
+set remoteServer "No remote server selected"
+set remoteServer2 $remoteServer
+set contactPort 15345
+set team -1
+set maxframesPerSecond -1
+set nick ""
+set shipShape ""
+set dumpall 0
+set help 0
+set shp 1
+set xpi 0
+set bot 0
+set noo 0
+
+if {[file exist $temp_dir/TkXpI.cmt] == 0} { 
+    set cmpt 0
+} else { 
+    set cmpt [read [open $temp_dir/TkXpI.cmt]] 
+    set cmpt [split $cmpt \n]
+    set cmpt [lindex $cmpt 0]
+}
+if {$cmpt == 100} { set cmpt -1 }
+set g [open $temp_dir/TkXpI.cmt w]
+puts $g [expr $cmpt+1]
+close $g
+catch {eval exec chmod 666 $temp_dir/TkXpI.cmt}
+
+
+ set client 0
+ if { $argc > 0 } {
+ }
+
+ set rev 0
+ foreach arg $argv {
+        if [string match {-info} $arg] {
+           set help 1 
+        } elseif [string match {-client} $arg] {
+           set client 1
+        } elseif [string match {-server} $arg] {
+           set client 2
+        } elseif [string match {-both} $arg] {
+           set client 3
+        } elseif [string match {-reverse} $arg] {
+           set rev 1
+        } elseif [string match {-noone} $arg] {
+           set noo 1
+	   set shp 0
+        } elseif [string match {-shp} $arg] {
+           set shp 1
+        } elseif [string match {-xpi} $arg] {
+           set xpi 1
+           set shp 0
+        } elseif [string match {-all} $arg] {
+           set bot 1
+           set shp 0
+        } else {
+	   puts stdout "Unknown option : $arg\n" 
+	}
+ }
+
+ if {[winfo screendepth .] <= 2} {# For monochrome displays
+   if $rev {
+    set colact "white" ; set coldes "white" ; set colsc "black"
+    set colSe  "white" ; set colbk  "black"
+   } else {
+    set colact "black" ; set coldes "black" ; set colsc "white"
+    set colSe  "black" ; set colbk  "white"
+   }
+ }
+
+set home_dir $env(HOME)
+set hostname 127.0.0.1
+catch {set hostname $env(HOST)}
+wm withdraw .
+update
+
+ if { $help == 1 } {
+     puts stdout "\
+Usage : TkXpInterface \[-options ...\]
+Where options include :
+
+    -info
+	Display this help message
+
+    -reverse 
+	if you have a monochrome display
+
+    -client
+	Run the client interface only
+
+    -server
+	Run the server interface only
+
+    -both 
+	Run the client & server interface
+
+    -shp
+	Load shipShape from $lib_dir/TkXpI.shp (if exists)
+
+    -xpi
+	Load shipShape from $home_dir/.xpilotrc (if exists)
+
+    -all
+	Laod shipShape from both previous file (if exists)
+
+    -noone
+	Doesn't load shipShape
+
+Click with the RIGHT button, or look at manual page TkXpInterface(1),
+to have some more specific help.\n"
+      exit 
+ } elseif {$client == 0} {
+     puts stdout "Try TkXpInterface -info for a help\n"
+     frame .botbuttons -bg $colbk
+     showcw .botbuttons.copyb 3 .
+ } else {
+     puts stdout "Try TkXpInterface -info for a help\n"
+     frame .botbuttons -bg $colbk
+     showcw .botbuttons.copyb 2 Root
+     mainproc 0
+ }
+######################################  The End #####################################

@@ -1,0 +1,8 @@
+Makefile
+My.config
+README
+xmkmf
+xxpilots
+*.ncb
+*.opt
+gmon.out

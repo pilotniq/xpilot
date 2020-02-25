@@ -1,0 +1,29 @@
+/* $Id: Imakefile,v 5.1 2001/05/19 11:05:42 bertg Exp $ */
+
+/* need config to compile msub.c. */
+#include "Local.config"
+
+/* Some systems _still_ don't define NullParameter... *sigh* */
+#ifndef NullParameter
+#define NullParameter
+#endif
+
+        SRCS = msub.c
+        OBJS = msub.o
+INSTALLFLAGS = $(INSTPGMFLAGS)
+
+all::
+install:: install.msub
+
+AllTarget(msub)
+NormalProgramTarget(msub,$(OBJS),NullParameter,NullParameter,NullParameter)
+InstallMultipleDest(install.msub,msub,$(BINDIR))
+
+DependTarget ()
+
+test:: msub
+	./msub -f test.makefile testfile
+
+regression:: msub
+	./msub -f test.makefile testfile | diff test.out -
+

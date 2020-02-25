@@ -1,0 +1,13 @@
+foo = Huh?
+bar = Huh?
+ugh = Huh?
+xy
+${wildcard x}
+
+The stuff in parens should be "abc": (abc)
+
+This should be a single dollar-sign: $
+This should be a double dollar-sign: $$
+So should this: $$
+
+This should say "y1": y1

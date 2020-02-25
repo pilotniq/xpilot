@@ -1,0 +1,39 @@
+--- Local.config.orig	Tue Jun 12 12:33:30 2001
++++ Local.config	Tue Jun 12 13:17:29 2001
+@@ -36,7 +36,7 @@
+ #define	LocalGuru xpilot@xpilot.org	/* The one to contact for problems */
+ #endif /* LocalGuru */
+ 
+-PREFIX = /usr/local
++PREFIX = /usr/X11R6
+ 
+ /* Manual pages for games usually go to section 6. */
+ MANSUFFIX = 6
+@@ -46,9 +46,9 @@
+ 
+ /* #define Log		/* Try to log every server start to log file */
+ /* #define Silent	/* Makes the server real silent */
+-/* #define ServerSound	/* Turns on sound support in the server (not client) */
++#define ServerSound	/* Turns on sound support in the server (not client) */
+ 
+-/* #define DoublebufferExtension	/* support for X Doublebuffer Extension */
++#define DoublebufferExtension	/* support for X Doublebuffer Extension */
+ /* #define MultibufferExtension 	/* support for X Multibuffer Extension */
+ /* #define Joystick	/* Joystick support for Linux, needs joystick 0.7 */
+ 
+@@ -105,13 +105,13 @@
+  * Try not defining anything first.  You probably want -O for speed.
+  */
+ /* CDEBUGFLAGS = -g				/* General debug flag */
+-CDEBUGFLAGS = -O				/* General optimize flag */
++/* CDEBUGFLAGS = -O				/* General optimize flag */
+ /* CDEBUGFLAGS = -Ae +O3 +FPD			/* HP cc optimize flags (no +ESlit) */
+ /* CDEBUGFLAGS = -Ae -g -z +w1			/* HP cc debug flags */
+ /* CDEBUGFLAGS = -g2 -O2			/* SGI debug */
+ /* CDEBUGFLAGS = -O2				/* SGI optimize */
+ /* CDEBUGFLAGS = -O -Hfsingle -w		/* AIX on a 3090 Mainframe */
+-/* CDEBUGFLAGS = -O2 -fstrength-reduce		/* gcc optimize flags */
++CDEBUGFLAGS = -O2 -fstrength-reduce		/* gcc optimize flags */
+ /* CDEBUGFLAGS = -Wc,-O3			/* Dynix/PTX 2 flags */
+ /* CDEBUGFLAGS = -Wall 				/* gcc high warning level */
+ /* CDEBUGFLAGS = -Wall -pedantic -ansi -Dlint	/* gcc ridiculous warning level */

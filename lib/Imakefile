@@ -1,0 +1,13 @@
+/* $Id: Imakefile,v 5.1 2001/06/24 18:59:33 bertg Exp $ */
+
+#include "Local.config"
+
+#define IHaveSubdirs
+#define PassCDebugFlags	'CDEBUGFLAGS=$(CDEBUGFLAGS)'
+
+SUBDIRS = maps textures
+
+InstallNonExecFile(sounds,$(INSTLIBDIR))
+InstallNonExecFile(defaults,$(INSTLIBDIR))
+InstallNonExecFile(password,$(INSTLIBDIR))
+InstallNonExecFile(robots,$(INSTLIBDIR))

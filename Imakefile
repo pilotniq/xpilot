@@ -1,0 +1,31 @@
+/* $Id: Imakefile,v 5.0 2001/04/07 20:00:56 dik Exp $ */
+
+#include "Local.config"
+
+MsubTargetPersistent(README.txt,README.txt.msub)
+MsubDepend
+AllTarget(README.txt)
+
+/*
+ * Note that we provide our own *Subdirs calls, so there's no need
+ * to define IHaveSubdirs.
+ */
+#define PassCDebugFlags	'CDEBUGFLAGS=$(CDEBUGFLAGS)'
+
+          SUBDIRS = doc contrib src			/* make all */
+  MAKEFILESUBDIRS = doc contrib src lib			/* make Makefiles */
+     CLEANSUBDIRS = doc contrib src lib			/* make clean */
+       DEPSUBDIRS =     contrib src			/* make depend */
+   INSTALLSUBDIRS =             src lib			/* make install */
+  INCLUDESSUBDIRS =             src			/* make includes */
+INSTALLMANSUBDIRS = doc					/* make install.man */
+       TAGSUBDIRS =             src			/* make tag */
+
+MakeSubdirs($(SUBDIRS))
+DependSubdirs($(DEPSUBDIRS))
+CleanSubdirs($(CLEANSUBDIRS))
+MakefileSubdirs($(MAKEFILESUBDIRS))
+IncludesSubdirs($(INCLUDESSUBDIRS))
+InstallSubdirs($(INSTALLSUBDIRS))
+InstallManSubdirs($(INSTALLMANSUBDIRS))
+CtagSubdirs($(TAGSUBDIRS))

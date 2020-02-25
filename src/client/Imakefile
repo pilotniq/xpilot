@@ -1,0 +1,150 @@
+/* $Id: Imakefile,v 5.1 2002/08/04 11:03:11 kimiko Exp $ */
+
+TOPDIR=../..
+COMMON = ../common/
+
+#include "Local.config"
+
+/*
+ * Sound configuration
+ */
+#if defined(NCD_SOUND)
+  AUDIOINC = $(NCDAUDIOINC)
+  AUDIOLIB = $(NCDAUDIOLIB)
+  AUDIOSRC = ncdaudio.c
+  AUDIOOBJ = ncdaudio.o
+  AUDIODEF = -DSOUND
+#else
+#if defined(RPLAY_SOUND)
+  AUDIOINC = $(RPLAYAUDIOINC)
+  AUDIOLIB = $(RPLAYAUDIOLIB)
+  AUDIOSRC = rplayaudio.c
+  AUDIOOBJ = rplayaudio.o
+  AUDIODEF = -DSOUND
+#else
+#if defined(AF_SOUND)
+  AUDIOINC = $(AFAUDIOINC)
+  AUDIOLIB = $(AFAUDIOLIB)
+  AUDIOSRC = afaudio.c
+  AUDIOOBJ = afaudio.o
+  AUDIODEF = -DSOUND
+#else
+#if defined(HP_SOUND)
+  AUDIOINC = $(HPAUDIOINC)
+  AUDIOLIB = $(HPAUDIOLIB)
+  AUDIOSRC = hpaudio.c
+  AUDIOOBJ = hpaudio.o
+  AUDIODEF = -DSOUND
+#else
+#if defined(ESD_SOUND)
+  AUDIOINC = $(ESDAUDIOINC)
+  AUDIOLIB = $(ESDAUDIOLIB)
+  AUDIOSRC = esdaudio.c
+  AUDIOOBJ = esdaudio.o
+  AUDIODEF = -DSOUND
+#else	/* no sound */
+#if defined(DEBUG_SOUND)
+  AUDIOINC = 
+  AUDIOLIB = 
+  AUDIOSRC = debugaudio.c
+  AUDIOOBJ = debugaudio.o
+  AUDIODEF = -DSOUND
+#else
+  AUDIOINC =
+  AUDIOLIB =
+  AUDIOSRC =
+  AUDIOOBJ =
+  AUDIODEF =
+#endif /* DEBUG_SOUND */
+#endif /* ESD_SOUND */
+#endif /* HP_SOUND */
+#endif /* AF_SOUND */
+#endif /* RPLAY_SOUND */
+#endif /* NCD_SOUND */
+
+#ifdef Erase
+DEFS_ERASE = -DERASE=1
+#endif
+#ifdef SparcCmapHack
+DEFS_SPARC_CMAP_HACK = -DSPARC_CMAP_HACK
+#endif
+#ifdef MultibufferExtension
+DEFS_MBX = -DMBX
+#endif
+#ifdef DoublebufferExtension
+DEFS_DBE = -DDBE
+#endif
+#ifdef Joystick
+DEFS_JOYSTICK = -DJOYSTICK
+#endif
+#ifdef WindowScaling
+DEFS_SCALING = -DWINDOWSCALING
+#endif
+#ifdef XPilotDevelopment
+DEFS_DEBUG = -DDEVELOPMENT
+#endif
+
+/*
+ * Assemble defines and includes.
+ *
+ * The DEFS_OTHER variable can be specified on the make command line like:
+ *
+ *    make DEFS_OTHER=-DENABLE_SOME_HACK
+ *
+ * or in the Local.config file.
+ *
+ */
+DEFINES = \
+       $(DEFS_ERASE) $(DEFS_SPARC_CMAP_HACK) $(DEFS_MBX) $(DEFS_DBE) \
+       $(DEFS_JOYSTICK) $(AUDIODEF) $(DEFS_SCALING) \
+       $(DEFS_OTHER) $(DEFS_DEBUG)
+INCLUDES = $(AUDIOINC) -I$(COMMON) -I../../lib/
+
+# keep this variable consistent with its counterpart in ../Makefile.std
+SRCS = \
+	about.c blockbitmaps.c \
+	caudio.c client.c colors.c configure.c \
+	datagram.c dbuff.c default.c \
+	gfx2d.c gfx3d.c guimap.c guiobjects.c \
+	join.c netclient.c \
+	paint.c paintdata.c painthud.c paintmap.c \
+	paintobjects.c paintradar.c query.c record.c sim.c \
+	syslimit.c talk.c talkmacros.c textinterface.c texture.c \
+	usleep.c welcome.c widget.c xeventhandlers.c \
+	xevent.c xinit.c xpilot.c xpmread.c \
+	$(AUDIOSRC)
+
+# keep this variable consistent with its counterpart in ../Makefile.std
+OBJS = \
+	about.o blockbitmaps.o \
+	caudio.o client.o colors.o configure.o \
+	datagram.o dbuff.o default.o \
+	gfx2d.o gfx3d.o guimap.o guiobjects.o \
+	join.o netclient.o \
+	paint.o paintdata.o painthud.o paintmap.o \
+	paintobjects.o paintradar.o query.o record.o sim.o \
+	syslimit.o talk.o talkmacros.o textinterface.o texture.o \
+	usleep.o welcome.o widget.o xeventhandlers.o \
+	xevent.o xinit.o xpilot.o xpmread.o \
+	$(AUDIOOBJ)
+
+DEPLIBS = $(COMMON)libxpcommon.a $(DEPXLIB)
+
+#if !defined(sgiCCoptions)		/* A hack that should mack everyone */
+					/* that doesn't have XLIBONLY. */
+#if !defined(MultibufferExtension)	/* On the other hand you need the */
+					/* EXTENSIONLIB sometimes, though ;) */
+#if !defined(DoublebufferExtension)
+EXTENSIONLIB = 
+DEPEXTENSIONLIB = 
+#endif /* MultibufferExtension */
+#endif /* DoublebufferExtension */
+X_LIB = $(XLIB)
+#else
+X_LIB = $(XLIBONLY)
+#endif
+
+PROGRAMS = xpilot
+
+ProgramTarget(xpilot,$(COMMON)libxpcommon.a $(AUDIOLIB),$(X_LIB) $(MATHLIB) $(EXTRALIB))
+CtagFiles(*.[ch] $(COMMON)*.[ch])

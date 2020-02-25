@@ -1,0 +1,30 @@
+/* $Id: Imakefile,v 5.0 2001/04/07 20:00:58 dik Exp $ */
+
+TOPDIR=..
+
+#include "Local.config"
+
+/*
+ * Note that we provide our own *Subdirs calls, so there's no need
+ * to define IHaveSubdirs.
+ */
+#define PassCDebugFlags	'CDEBUGFLAGS=$(CDEBUGFLAGS)'
+
+          SUBDIRS = common client server replay mapedit		/* make all */
+  MAKEFILESUBDIRS = common client server replay mapedit		/* make Makefiles */
+     CLEANSUBDIRS = common client server replay mapedit		/* make clean */
+       DEPSUBDIRS = common client server replay mapedit		/* make depend */
+   INSTALLSUBDIRS =        client server replay mapedit		/* make install */
+  INCLUDESSUBDIRS = common					/* make includes */
+INSTALLMANSUBDIRS = 						/* make install.man */
+       TAGSUBDIRS = common client server					/* make tag */
+
+MakeSubdirs($(SUBDIRS))
+DependSubdirs($(DEPSUBDIRS))
+CleanSubdirs($(CLEANSUBDIRS))
+MakefileSubdirs($(MAKEFILESUBDIRS))
+IncludesSubdirs($(INCLUDESSUBDIRS))
+InstallSubdirs($(INSTALLSUBDIRS))
+InstallManSubdirs($(INSTALLMANSUBDIRS))
+CtagSubdirs($(TAGSUBDIRS))
+

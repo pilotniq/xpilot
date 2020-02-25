@@ -40,8 +40,8 @@ MANDIR=$(INSTALLDIR)/man/man6
 # Generic flags.  Probably won't work.  Use one of the specifics below.
 #
 CC = gcc
-CFLAGS = $(DEFS) $(INCS) -O -I/usr/local/X11/include
-MLIB = -lm
+CFLAGS = $(DEFS) $(INCS) -g -O -I/usr/local/X11/include `pkg-config --cflags libwebsockets openssl`
+MLIB = -lm `pkg-config --libs libwebsockets openssl`
 XLIB = -L/usr/local/X11/lib -lX11
 
 #
@@ -254,7 +254,7 @@ OBJS2 = alliance.o asteroid.o cannon.o cell.o cmdline.o \
 	saudio.o sched.o score.o server.o \
 	ship.o shot.o showtime.o stratbot.o \
 	tuner.o \
-	update.o walls.o wildmap.o
+	update.o walls.o websocket.o wildmap.o
 SRCS2 = alliance.c asteroid.c cannon.c cell.c cmdline.c \
 	collision.c command.c contact.c \
 	event.c fileparser.c frame.c \
@@ -266,7 +266,7 @@ SRCS2 = alliance.c asteroid.c cannon.c cell.c cmdline.c \
 	saudio.c sched.c score.c server.c \
 	ship.c shot.c showtime.c stratbot.c \
 	tuner.c \
-	update.c walls.c wildmap.c
+	update.c walls.c websocket.c wildmap.c
 
 #
 # Playback program xp-replay

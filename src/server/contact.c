@@ -43,6 +43,8 @@
 # include <process.h>
 #endif
 
+#include "websocket.h"
+
 #define SERVER
 #include "version.h"
 #include "config.h"
@@ -106,6 +108,15 @@ int Contact_init(void)
     /*
      * Create a socket which we can listen on.
      */
+    /*
+     * Create websocket server with libwebsocket
+     */
+    if( !websocket_init() )
+    {
+      error( "Could not create websocket" );
+      return End_game();
+    }
+
     if ((status = sock_open_udp(&contactSocket, serverAddr,
 			        contactPort)) == -1) {
 	error("Could not create Dgram contactSocket");
@@ -121,7 +132,7 @@ int Contact_init(void)
 		     SOCKBUF_READ | SOCKBUF_WRITE | SOCKBUF_DGRAM) == -1) {
 	error("No memory for contact buffer");
 	return(End_game());
-   }
+    }
 
     install_input(Contact, contactSocket.fd, (void *) &contactSocket);
 	return(TRUE);

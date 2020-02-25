@@ -48,8 +48,8 @@ extern char *xp_safe_strdup(const char *old_string);
 unsigned String_hash(const char *s);
 
 /* strlcpy.c */
-size_t strlcpy(char *dest, const char *src, size_t size);
-size_t strlcat(char *dest, const char *src, size_t size);
+// size_t strlcpy(char *dest, const char *src, size_t size);
+// size_t strlcat(char *dest, const char *src, size_t size);
 
 /* xpmemory.c */
 
